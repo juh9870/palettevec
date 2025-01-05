@@ -5,7 +5,7 @@
 ### Palette compression has the following advantages:
 - Potentially insane compression ratios
 - Buffer can be manipulated without decompressing
-- Changing all occurances of one item to another is O(1)
+- Changing all occurences of one item to another is O(1)
 - Easy to use
 
 ### Disadvantages:
