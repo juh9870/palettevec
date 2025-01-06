@@ -1,7 +1,10 @@
-use std::ops::Index;
+use rustc_hash::FxHashMap;
+use std::{hash::Hash, ops::Index};
 
 /// A palette compressed vector.
-pub struct PalleteVec<T: Eq + Clone> {
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
+pub struct PaletteVec<T: Eq + Hash + Clone> {
     palette: Vec<(T, u32)>,
     indices: Vec<u64>,
     /// Amount of bits unused in last u64
@@ -10,7 +13,7 @@ pub struct PalleteVec<T: Eq + Clone> {
     len: usize,
 }
 
-impl<T: Eq + Clone> PalleteVec<T> {
+impl<T: Eq + Hash + Clone> PaletteVec<T> {
     pub fn new() -> Self {
         Self {
             palette: Vec::new(),
@@ -39,7 +42,7 @@ impl<T: Eq + Clone> PalleteVec<T> {
     }
 
     fn grow_index_size(&mut self) {
-        let mut new_vec: PalleteVec<T> = PalleteVec::new();
+        let mut new_vec: PaletteVec<T> = PaletteVec::new();
         new_vec.indices = Vec::with_capacity(self.indices.len() * 2);
         new_vec.palette = self.palette.clone();
         new_vec.index_size = self.index_size + 1;
@@ -347,6 +350,11 @@ impl<T: Eq + Clone> PalleteVec<T> {
         None
     }
 
+    /// DANGER: If you set the palette entry to an item that is already in the palette,
+    /// two different indices will now exist for the same item. To circumvent this, you should either:
+    /// 
+    /// 1) Only set an item to a palette entry that is not already in the palette OR
+    /// 2) Call optimize after setting the duplicate palette entry.
     pub fn set_palette_entry(&mut self, palette_index: usize, item: T) {
         if palette_index >= self.palette.len() {
             panic!("Index out of bounds.");
@@ -361,12 +369,17 @@ impl<T: Eq + Clone> PalleteVec<T> {
     /// using heuristics like after a specific number of operations have been done
     /// or how much time has passed since last optimization.
     pub fn optimize(&mut self) {
-        let mut new_palette = self
-            .palette
-            .iter()
-            .filter(|(_, count)| *count > 0)
-            .cloned()
-            .collect::<Vec<_>>();
+        let mut new_palette = FxHashMap::default();
+        for (item, count) in &self.palette {
+            if *count > 0 {
+                if let Some(count) = new_palette.get_mut(item) {
+                    *count += *count;
+                } else {
+                    new_palette.insert(item.clone(), *count);
+                }
+            }
+        }
+        let mut new_palette = new_palette.into_iter().collect::<Vec<_>>();
         new_palette.sort_unstable_by(|a, b| b.1.cmp(&a.1));
 
         if new_palette.is_empty() {
@@ -441,7 +454,7 @@ impl<'a> Iterator for IndexIterator<'a> {
     }
 }
 
-impl<T: Eq + Clone> Index<usize> for PalleteVec<T> {
+impl<T: Eq + Hash + Clone> Index<usize> for PaletteVec<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -449,12 +462,12 @@ impl<T: Eq + Clone> Index<usize> for PalleteVec<T> {
     }
 }
 
-pub struct PaletteVecIterator<'a, T: Eq + Clone> {
-    vec: &'a PalleteVec<T>,
+pub struct PaletteVecIterator<'a, T: Eq + Hash + Clone> {
+    vec: &'a PaletteVec<T>,
     index: usize,
 }
 
-impl<'a, T: Eq + Clone> Iterator for PaletteVecIterator<'a, T> {
+impl<'a, T: Eq + Hash + Clone> Iterator for PaletteVecIterator<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -467,12 +480,12 @@ impl<'a, T: Eq + Clone> Iterator for PaletteVecIterator<'a, T> {
 }
 
 /// This clones every item from the palette. This may be expensive.
-pub struct PaletteVecIteratorOwned<T: Eq + Clone> {
-    vec: PalleteVec<T>,
+pub struct PaletteVecIteratorOwned<T: Eq + Hash + Clone> {
+    vec: PaletteVec<T>,
     index: usize,
 }
 
-impl<T: Eq + Clone> Iterator for PaletteVecIteratorOwned<T> {
+impl<T: Eq + Hash + Clone> Iterator for PaletteVecIteratorOwned<T> {
     type Item = T;
 
     /// This clones every item from the palette. This may be expensive.
@@ -493,7 +506,7 @@ mod tests {
 
     #[test]
     fn test_pushing_doesnt_panic() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for i in 0..200 {
             for j in 0..i {
                 vec.push(j);
@@ -503,7 +516,7 @@ mod tests {
 
     #[test]
     fn test_popping_empty() {
-        let mut vec = PalleteVec::<u32>::new();
+        let mut vec = PaletteVec::<u32>::new();
         for _ in 0..200 {
             assert_eq!(vec.pop(), None);
         }
@@ -511,7 +524,7 @@ mod tests {
 
     #[test]
     fn test_pushing_and_popping() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for i in 0..1000 {
             vec.push(i);
             assert_eq!(vec.pop(), Some(&i));
@@ -521,7 +534,7 @@ mod tests {
 
     #[test]
     fn test_pushing_and_popping2() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for i in 0..500 {
             for j in 0..i {
                 vec.push(j);
@@ -545,7 +558,7 @@ mod tests {
 
     #[test]
     fn test_push_pop_random() {
-        let mut vec = PalleteVec::<u32>::new();
+        let mut vec = PaletteVec::<u32>::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..30 {
             for _ in 0..1000 {
@@ -563,7 +576,7 @@ mod tests {
 
     #[test]
     fn test_set() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for i in 0..1000 {
             vec.push(i);
         }
@@ -578,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_set_random() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..30 {
             for _ in 0..1000 {
@@ -602,7 +615,7 @@ mod tests {
 
     #[test]
     fn test_get() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for _ in 0..33 {
             for i in 0..1000 {
                 vec.push(i);
@@ -618,7 +631,7 @@ mod tests {
 
     #[test]
     fn test_last() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for _ in 0..33 {
             for i in 0..1000 {
                 vec.push(i);
@@ -632,7 +645,7 @@ mod tests {
 
     #[test]
     fn test_remove() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for _ in 0..33 {
             for i in 0..1000 {
                 vec.push(i);
@@ -647,7 +660,7 @@ mod tests {
     #[test]
     fn test_remove_random() {
         let mut rng = rand::thread_rng();
-        let mut vec = PalleteVec::<u32>::new();
+        let mut vec = PaletteVec::<u32>::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..33 {
             for _ in 0..500 {
@@ -668,7 +681,7 @@ mod tests {
 
     #[test]
     fn test_swap_remove() {
-        let mut vec = PalleteVec::<u32>::new();
+        let mut vec = PaletteVec::<u32>::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..11 {
             for i in 0..1000 {
@@ -685,7 +698,7 @@ mod tests {
     #[test]
     fn test_swap_remove_random() {
         let mut rng = rand::thread_rng();
-        let mut vec = PalleteVec::<u32>::new();
+        let mut vec = PaletteVec::<u32>::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..33 {
             for _ in 0..500 {
@@ -705,7 +718,7 @@ mod tests {
 
     #[test]
     fn test_insert() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for i in 0..1000 {
             vec.push(i);
         }
@@ -719,7 +732,7 @@ mod tests {
 
     #[test]
     fn test_insert_random() {
-        let mut vec = PalleteVec::<u32>::new();
+        let mut vec = PaletteVec::<u32>::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..33 {
             for _ in 0..500 {
@@ -741,7 +754,7 @@ mod tests {
 
     #[test]
     fn test_clear() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for _ in 0..33 {
             for i in 0..1000 {
                 vec.push(i);
@@ -753,7 +766,7 @@ mod tests {
 
     #[test]
     fn test_clear_keep_index_size() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for _ in 0..33 {
             for i in 0..1000 {
                 vec.push(i);
@@ -766,7 +779,7 @@ mod tests {
     #[test]
     fn test_optimize() {
         let mut rng = thread_rng();
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..203 {
             for i in 0..rng.gen_range(100..1000) {
@@ -795,7 +808,7 @@ mod tests {
     #[test]
     fn test_large() {
         let mut rng = thread_rng();
-        let mut vec = PalleteVec::<u32>::new();
+        let mut vec = PaletteVec::<u32>::new();
         vec.optimize();
         let mut control = Vec::<u32>::new();
         for _ in 0..533 {
@@ -851,7 +864,7 @@ mod tests {
 
     #[test]
     fn test_optimize_size() {
-        let mut vec = PalleteVec::new();
+        let mut vec = PaletteVec::new();
         for i in 0..1000 {
             vec.push(i);
         }
@@ -863,5 +876,19 @@ mod tests {
         assert_eq!(vec.len(), 1);
         assert_eq!(vec.palette.len(), 1);
         assert_eq!(vec.indices.len(), 1);
+    }
+
+    #[test]
+    fn test_replacing_palette_entry() {
+        let mut vec = PaletteVec::new();
+        for i in 0..1000 {
+            vec.push(i % 2);
+        }
+        let (index, _) = vec.get_palette_entry(&0).unwrap();
+        vec.set_palette_entry(index, 1);
+        vec.optimize();
+        while let Some(i) = vec.pop() {
+            assert_eq!(i, &1);
+        }
     }
 }
