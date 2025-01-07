@@ -2,6 +2,7 @@ use rustc_hash::FxHashMap;
 use std::{hash::Hash, ops::Index};
 
 /// A palette compressed vector.
+#[derive(PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct PaletteVec<T: Eq + Hash + Clone> {
