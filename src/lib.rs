@@ -550,6 +550,7 @@ mod tests {
             assert_eq!(vec.pop(), Some(&i));
         }
         assert_eq!(vec.pop(), None);
+        assert!(vec.is_empty());
     }
 
     #[test]
@@ -910,5 +911,25 @@ mod tests {
         while let Some(i) = vec.pop() {
             assert_eq!(i, &1);
         }
+    }
+
+    #[test]
+    fn test_palette_map() {
+        let mut vec = PaletteVec::new();
+        for i in 0..100 {
+            vec.push(i);
+        }
+        let mapped = vec.map_palette(|entry|Some(100-entry));
+        for i in 0..100 {
+            assert_eq!(*mapped.get(i), Some(100-i));
+        }
+    }
+
+    #[test]
+    fn test_get_checked(){
+        let mut vec = PaletteVec::new();
+        vec.push(1);
+        assert_eq!(vec.get_checked(0).cloned(), Some(1));
+        assert_eq!(vec.get_checked(1), None);
     }
 }
