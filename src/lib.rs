@@ -165,6 +165,9 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
     pub fn len(&self) -> usize {
         self.len
     }
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
 
     pub fn set(&mut self, index: usize, item: T) {
         if index >= self.len() {
@@ -230,6 +233,12 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
         let palette_index = (*target_u64 >> target_offset) & mask;
         let (item, _) = self.palette.get(palette_index as usize).unwrap();
         item
+    }
+    pub fn get_checked(&self, index: usize) -> Option<&T> {
+        if index >= self.len() {
+            return None;
+        }
+        Some(self.get(index))
     }
 
     pub fn last(&self) -> Option<&T> {
@@ -420,6 +429,16 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
         self.palette = new_palette;
         self.index_size = index_size;
         self.padding_in_last_u64 = current_padding;
+    }
+
+    pub fn map_palette<M: Eq + Hash + Clone>(&self, mut f: impl FnMut(&T) -> M) -> PaletteVec<M>{
+        PaletteVec{
+            palette: self.palette.iter().map(|(element, count)|(f(element), *count)).collect(),
+            indices: self.indices.clone(),
+            len: self.len,
+            index_size: self.index_size,
+            padding_in_last_u64: self.padding_in_last_u64,
+        }
     }
 }
 
