@@ -430,7 +430,7 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
         self.index_size = index_size;
         self.padding_in_last_u64 = current_padding;
     }
-
+    /// DANGER: This can create multiple entries with same value, follow the same steps as with [set_palette_entry](fn@PaletteVec::set_palette_entry).
     pub fn map_palette<M: Eq + Hash + Clone>(&self, mut f: impl FnMut(&T) -> M) -> PaletteVec<M>{
         PaletteVec{
             palette: self.palette.iter().map(|(element, count)|(f(element), *count)).collect(),
