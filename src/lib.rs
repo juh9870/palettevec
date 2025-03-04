@@ -380,12 +380,12 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
     /// or how much time has passed since last optimization.
     pub fn optimize(&mut self) {
         let mut new_palette = FxHashMap::default();
-        for (item, count) in &self.palette {
-            if *count > 0 {
+        for (item, old_count) in &self.palette {
+            if *old_count > 0 {
                 if let Some(count) = new_palette.get_mut(item) {
-                    *count += *count;
+                    *count += *old_count;
                 } else {
-                    new_palette.insert(item.clone(), *count);
+                    new_palette.insert(item.clone(), *old_count);
                 }
             }
         }
@@ -430,6 +430,7 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
         self.index_size = index_size;
         self.padding_in_last_u64 = current_padding;
     }
+
     /// DANGER: This can create multiple entries with same value, follow the same steps as with [set_palette_entry](fn@PaletteVec::set_palette_entry).
     pub fn map_palette<M: Eq + Hash + Clone>(&self, mut f: impl FnMut(&T) -> M) -> PaletteVec<M>{
         PaletteVec{
