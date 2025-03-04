@@ -521,7 +521,8 @@ impl<T: Eq + Hash + Clone> Iterator for PaletteVecIteratorOwned<T> {
 
 #[cfg(test)]
 mod tests {
-    use rand::{thread_rng, Rng};
+
+    use rand::{rng, Rng};
 
     use super::*;
 
@@ -681,17 +682,17 @@ mod tests {
 
     #[test]
     fn test_remove_random() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut vec = PaletteVec::<u32>::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..33 {
             for _ in 0..500 {
-                let n = rng.gen_range(0..333);
+                let n = rng.random_range(0..333);
                 vec.push(n);
                 control.push(n);
             }
             for _ in 0..300 {
-                let i = rng.gen_range(0..control.len());
+                let i = rng.random_range(0..control.len());
                 vec.remove(i);
                 control.remove(i);
             }
@@ -719,17 +720,17 @@ mod tests {
 
     #[test]
     fn test_swap_remove_random() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut vec = PaletteVec::<u32>::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..33 {
             for _ in 0..500 {
-                let n = rng.gen_range(0..333);
+                let n = rng.random_range(0..333);
                 vec.push(n);
                 control.push(n);
             }
             for _ in 0..333 {
-                let i = rng.gen_range(0..control.len());
+                let i = rng.random_range(0..control.len());
                 assert_eq!(*vec.swap_remove(i), control.swap_remove(i));
             }
             for i in 0..control.len() {
@@ -800,22 +801,22 @@ mod tests {
 
     #[test]
     fn test_optimize() {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut vec = PaletteVec::new();
         let mut control = Vec::<u32>::new();
         for _ in 0..203 {
-            for i in 0..rng.gen_range(100..1000) {
+            for i in 0..rng.random_range(100..1000) {
                 vec.push(i);
                 control.push(i);
             }
-            for _ in 0..rng.gen_range(10..90) {
-                let i = rng.gen_range(0..control.len());
+            for _ in 0..rng.random_range(10..90) {
+                let i = rng.random_range(0..control.len());
                 vec.remove(i);
                 control.remove(i);
             }
-            for _ in 0..rng.gen_range(10..90) {
-                let i = rng.gen_range(0..control.len());
-                let n = rng.gen_range(0..333);
+            for _ in 0..rng.random_range(10..90) {
+                let i = rng.random_range(0..control.len());
+                let n = rng.random_range(0..333);
                 vec.insert(i, n);
                 control.insert(i, n);
             }
@@ -829,14 +830,14 @@ mod tests {
 
     #[test]
     fn test_large() {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut vec = PaletteVec::<u32>::new();
         vec.optimize();
         let mut control = Vec::<u32>::new();
         for _ in 0..533 {
             // Push 100 random numbers
             for _ in 0..1000 {
-                let n = rng.gen_range(0..514);
+                let n = rng.random_range(0..514);
                 vec.push(n);
                 control.push(n);
             }
@@ -845,14 +846,14 @@ mod tests {
             control.remove(0);
             // Remove 100 random numbers
             for _ in 0..100 {
-                let i = rng.gen_range(0..control.len());
+                let i = rng.random_range(0..control.len());
                 vec.remove(i as usize);
                 control.remove(i as usize);
             }
             // Insert 100 random numbers
             for _ in 0..100 {
-                let i = rng.gen_range(0..control.len());
-                let n = rng.gen_range(0..514);
+                let i = rng.random_range(0..control.len());
+                let n = rng.random_range(0..514);
                 vec.insert(i as usize, n);
                 control.insert(i as usize, n);
             }
@@ -862,14 +863,14 @@ mod tests {
             }
             // Swap remove random numbers
             for _ in 0..100 {
-                let i = rng.gen_range(0..control.len());
+                let i = rng.random_range(0..control.len());
                 assert_eq!(
                     vec.swap_remove(i as usize),
                     &control.swap_remove(i as usize)
                 );
             }
             // Optimize randomly
-            if rng.gen_bool(0.25) {
+            if rng.random_bool(0.25) {
                 vec.optimize();
             }
             assert!(vec.len() == control.len());

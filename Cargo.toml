@@ -11,13 +11,20 @@ readme = "README.md"
 repository = "https://github.com/alexdesander/palettevec"
 
 [dependencies]
-rustc-hash = "2.1.0"
+rustc-hash = "2.1"
 bitcode = { version = "0.6", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 
+
 [dev-dependencies]
-rand = "0.8.5"
+rand = "0.9"
+rand_chacha = "0.9"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
 serde = ["dep:serde"]
 bitcode = ["dep:bitcode"]
+
+[[bench]]
+name = "benchmark"
+harness = false
