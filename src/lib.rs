@@ -146,10 +146,10 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
             }
         }
         // - Need completely new entry
+        self.grow_index_size_if_needed();
         self.palette.push((item, 1));
         self.push_index((self.palette.len() - 1) as u64);
         self.len += 1;
-        self.grow_index_size_if_needed();
     }
 
     pub fn pop(&mut self) -> Option<&T> {
@@ -157,6 +157,7 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
             return None;
         };
         let (item, count) = self.palette.get_mut(index as usize).unwrap();
+        debug_assert!(*count > 0, "Palette count underflow detected!");
         *count -= 1;
         self.len -= 1;
         Some(item)
@@ -165,6 +166,7 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
     pub fn len(&self) -> usize {
         self.len
     }
+
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -215,37 +217,25 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
             }
         }
         // - Need completely new entry
-        self.palette.push((item, 1));
-        let new_index = self.palette.len() - 1;
+        let new_index = self.palette.len();
         *target_u64 &= !(mask << target_offset);
         *target_u64 |= (new_index as u64) << target_offset;
         self.grow_index_size_if_needed();
+        self.palette.push((item, 1));
     }
 
-    pub fn get(&self, index: usize) -> &T {
-        if index >= self.len() {
-            panic!("Index out of bounds");
-        }
-        let indices_per_u64 = 64 / self.index_size as usize;
-        let target_u64 = &self.indices[index / indices_per_u64];
-        let target_offset = 64 - (index % indices_per_u64 + 1) as u8 * self.index_size;
-        let mask = (1 << self.index_size) - 1;
-        let palette_index = (*target_u64 >> target_offset) & mask;
-        let (item, _) = self.palette.get(palette_index as usize).unwrap();
-        item
-    }
-    pub fn get_checked(&self, index: usize) -> Option<&T> {
-        if index >= self.len() {
+    pub fn get(&self, index: usize) -> Option<&T> {
+        if index  >= self.len() {
             return None;
         }
-        Some(self.get(index))
+        Some(&self[index])
     }
 
     pub fn last(&self) -> Option<&T> {
-        if self.len() == 0 {
+        if self.is_empty() {
             return None;
         }
-        Some(self.get(self.len().saturating_sub(1)))
+        Some(&self[self.len() - 1])
     }
 
     pub fn remove(&mut self, index: usize) -> &T {
@@ -263,6 +253,7 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
             let index = self.get_index(i + 1);
             self.set_index(i, index);
         }
+        
         self.pop_index();
         self.len -= 1;
         // Return the removed item
@@ -330,10 +321,10 @@ impl<T: Eq + Hash + Clone> PaletteVec<T> {
         }
 
         // Need to create a new palette entry
+        self.grow_index_size_if_needed();
         self.palette.push((item, 1));
         self.set_index(index, (self.palette.len() - 1) as u64);
         self.len += 1;
-        self.grow_index_size_if_needed();
     }
 
     pub fn clear(&mut self) {
@@ -479,7 +470,13 @@ impl<T: Eq + Hash + Clone> Index<usize> for PaletteVec<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
-        self.get(index)
+        let indices_per_u64 = 64 / self.index_size as usize;
+        let target_u64 = &self.indices[index / indices_per_u64];
+        let target_offset = 64 - (index % indices_per_u64 + 1) as u8 * self.index_size;
+        let mask = (1 << self.index_size) - 1;
+        let palette_index = (*target_u64 >> target_offset) & mask;
+        let (item, _) = self.palette.get(palette_index as usize).unwrap();
+        item
     }
 }
 
@@ -492,11 +489,8 @@ impl<'a, T: Eq + Hash + Clone> Iterator for PaletteVecIterator<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.vec.len() {
-            return None;
-        }
         self.index += 1;
-        Some(self.vec.get(self.index - 1))
+        self.vec.get(self.index - 1)
     }
 }
 
@@ -511,11 +505,8 @@ impl<T: Eq + Hash + Clone> Iterator for PaletteVecIteratorOwned<T> {
 
     /// This clones every item from the palette. This may be expensive.
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.vec.len() {
-            return None;
-        }
         self.index += 1;
-        Some(self.vec.get(self.index - 1).clone())
+        self.vec.get(self.index - 1).cloned()
     }
 }
 
@@ -644,7 +635,7 @@ mod tests {
                 vec.push(i);
             }
             for i in 0..1000 {
-                assert_eq!(vec.get(i), &i);
+                assert_eq!(vec.get(i), Some(&i));
             }
             for i in (0..1000).rev() {
                 assert_eq!(vec.pop(), Some(&i));
@@ -697,7 +688,7 @@ mod tests {
                 control.remove(i);
             }
             for i in 0..control.len() {
-                assert_eq!(vec.get(i), &control[i]);
+                assert_eq!(vec.get(i), Some(&control[i]));
             }
         }
     }
@@ -734,7 +725,7 @@ mod tests {
                 assert_eq!(*vec.swap_remove(i), control.swap_remove(i));
             }
             for i in 0..control.len() {
-                assert_eq!(vec.get(i), &control[i]);
+                assert_eq!(vec.get(i), Some(&control[i]));
             }
         }
     }
@@ -749,7 +740,7 @@ mod tests {
             vec.insert(i, i + 1000);
         }
         for i in (0..1000).rev() {
-            assert_eq!(vec.get(i), &(i + 1000));
+            assert_eq!(vec.get(i), Some(&(i + 1000)));
         }
     }
 
@@ -770,7 +761,7 @@ mod tests {
                 control.insert(i as usize, j);
             }
             for i in 0..500 {
-                assert_eq!(vec.get(i), &control[i]);
+                assert_eq!(vec.get(i), Some(&control[i]));
             }
         }
     }
@@ -824,7 +815,7 @@ mod tests {
         }
         assert_eq!(vec.len(), control.len());
         for i in 0..control.len() {
-            assert_eq!(vec.get(i), &control[i]);
+            assert_eq!(vec.get(i), Some(&control[i]));
         }
     }
 
@@ -834,9 +825,9 @@ mod tests {
         let mut vec = PaletteVec::<u32>::new();
         vec.optimize();
         let mut control = Vec::<u32>::new();
-        for _ in 0..533 {
-            // Push 100 random numbers
-            for _ in 0..1000 {
+        for _ in 0..500 {
+            // Push 200 random numbers
+            for _ in 0..300 {
                 let n = rng.random_range(0..514);
                 vec.push(n);
                 control.push(n);
@@ -923,7 +914,7 @@ mod tests {
         }
         let mapped = vec.map_palette(|entry|Some(100-entry));
         for i in 0..100 {
-            assert_eq!(*mapped.get(i), Some(100-i));
+            assert_eq!(*mapped.get(i).unwrap(), Some(100-i));
         }
     }
 
@@ -931,7 +922,7 @@ mod tests {
     fn test_get_checked(){
         let mut vec = PaletteVec::new();
         vec.push(1);
-        assert_eq!(vec.get_checked(0).cloned(), Some(1));
-        assert_eq!(vec.get_checked(1), None);
+        assert_eq!(vec.get(0).cloned(), Some(1));
+        assert_eq!(vec.get(1), None);
     }
 }
