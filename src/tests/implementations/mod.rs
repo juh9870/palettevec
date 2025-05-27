@@ -1,1 +1,1 @@
-pub mod specialized_array;
+pub mod fast_palette_array;
