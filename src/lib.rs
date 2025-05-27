@@ -1,3 +1,4 @@
+pub(crate) mod index_buffer;
 pub(crate) mod palette;
 
 #[cfg(test)]
