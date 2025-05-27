@@ -1,4 +1,3 @@
-mod fast_palette_array;
 pub(crate) mod palette;
 
 #[cfg(test)]
