@@ -1,4 +1,4 @@
-use crate::palette::{Palette, PaletteEntry};
+use crate::palette::{calculate_smallest_index_size, Palette, PaletteEntry};
 
 mod hybrid;
 
@@ -15,6 +15,19 @@ fn test_palette_len<P: Palette<i32>>(mut palette: P, amount_unique_inserts: i32)
     for value in 0..amount_unique_inserts {
         palette.insert_new(PaletteEntry { value, count: 1 });
         assert_eq!(palette.len(), value as usize + 1);
+    }
+}
+
+fn test_palette_index_size<P: Palette<i32>>(mut palette: P, amount_unique_inserts: i32) {
+    assert_eq!(palette.index_size(), 0);
+    palette.insert_new(PaletteEntry { value: 0, count: 1 });
+    assert_eq!(palette.index_size(), 0);
+    for value in 2..amount_unique_inserts {
+        palette.insert_new(PaletteEntry { value, count: 1 });
+        assert_eq!(
+            palette.index_size(),
+            calculate_smallest_index_size(value as u32)
+        );
     }
 }
 
@@ -131,5 +144,31 @@ fn test_palette_optimize<P: Palette<i32>>(mut palette: P, amount_unique_inserts:
                 .count,
             control_value.count
         );
+    }
+}
+
+fn test_palette_index_size_after_optimizing<P: Palette<i32>>(
+    mut palette: P,
+    amount_unique_inserts: i32,
+) {
+    for value in 0..amount_unique_inserts {
+        palette.insert_new(PaletteEntry {
+            value,
+            count: value as u32 + 1,
+        });
+    }
+    assert_eq!(
+        palette.index_size(),
+        calculate_smallest_index_size(amount_unique_inserts as u32)
+    );
+
+    for i in 0..amount_unique_inserts {
+        palette.get_mut_by_index(0).unwrap().count = 0;
+        palette.mark_as_unused(0);
+        palette.optimize();
+        assert_eq!(
+            palette.index_size(),
+            calculate_smallest_index_size(amount_unique_inserts as u32 - i as u32 - 1)
+        )
     }
 }

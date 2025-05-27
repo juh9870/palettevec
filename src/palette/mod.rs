@@ -29,12 +29,19 @@ fn compare_palette_entries_max_first<T: Eq + Clone>(
     b.count.cmp(&a.count)
 }
 
+pub(crate) fn calculate_smallest_index_size(n: u32) -> u32 {
+    if n == 0 {
+        return 0;
+    }
+    u32::BITS - (n - 1).leading_zeros()
+}
+
 pub trait Palette<T: Eq + Clone> {
     /// Returns amount of palette entries with count > 0.
     /// DO NOT use this to calculate index size. Use index_size() instead.
     fn len(&self) -> usize;
     /// Gets the current index size. This can change after insert_new() or optimize().
-    fn index_size(&self) -> usize;
+    fn index_size(&self) -> u32;
 
     fn get_by_value(&self, value: &T) -> Option<&PaletteEntry<T>>;
     fn get_mut_by_value(&mut self, value: &T) -> Option<&mut PaletteEntry<T>>;
