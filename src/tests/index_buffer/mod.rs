@@ -137,3 +137,34 @@ fn test_index_buffer_set<B: IndexBuffer>(buffer: &mut B, index_size: usize, iter
     }
     assert_eq!(buffer.pop_index(), None);
 }
+
+fn test_index_buffer_index_size_0_operations<B: IndexBuffer>(buffer: &mut B) {
+    assert_eq!(buffer.pop_index(), None);
+    buffer.set_index_size(0, None);
+    assert_eq!(buffer.pop_index(), None);
+    for _ in 0..10 {
+        buffer.push_index(0);
+    }
+    for i in 0..10 {
+        assert_eq!(buffer.get_index(i), 0);
+    }
+    // Setting is not tested because we should never set anyway when index size is 0
+    for _ in 0..10 {
+        assert_eq!(buffer.pop_index(), Some(0));
+    }
+    for _ in 0..10 {
+        buffer.push_index(0);
+    }
+    buffer.set_index_size(1, None);
+    for i in 0..10 {
+        assert_eq!(buffer.get_index(i), 0);
+    }
+    buffer.set_index_size(0, None);
+    for i in 0..10 {
+        assert_eq!(buffer.get_index(i), 0);
+    }
+    for _ in 0..10 {
+        assert_eq!(buffer.pop_index(), Some(0));
+    }
+    assert_eq!(buffer.pop_index(), None);
+}

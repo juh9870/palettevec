@@ -5,7 +5,7 @@ mod hybrid;
 fn test_palette_insert_new<P: Palette<i32>>(mut palette: P, amount_unique_inserts: i32) {
     for value in 0..amount_unique_inserts {
         assert_eq!(
-            palette.insert_new(PaletteEntry { value, count: 1 }),
+            palette.insert_new(PaletteEntry { value, count: 1 }).0,
             value as u64
         );
     }
@@ -38,11 +38,11 @@ fn test_pallete_get_by_value<P: Palette<i32>>(mut palette: P, amount_unique_inse
 
     for value in 0..amount_unique_inserts {
         assert_eq!(
-            palette.get_by_value(&value),
+            palette.get_by_value(&value).map(|x| x.0),
             Some(&PaletteEntry { value, count: 1 })
         );
         assert_eq!(
-            palette.get_mut_by_value(&value),
+            palette.get_mut_by_value(&value).map(|x| x.0),
             Some(&mut PaletteEntry { value, count: 1 })
         );
     }
@@ -68,16 +68,6 @@ fn test_palette_get_by_index<P: Palette<i32>>(mut palette: P, amount_unique_inse
                 count: 1
             })
         );
-    }
-}
-
-fn test_palette_get_index_from_value<P: Palette<i32>>(mut palette: P, amount_unique_inserts: i32) {
-    for value in 0..amount_unique_inserts {
-        palette.insert_new(PaletteEntry { value, count: 1 });
-    }
-
-    for value in 0..amount_unique_inserts {
-        assert_eq!(palette.get_index_from_value(&value), Some(value as u64));
     }
 }
 
@@ -127,8 +117,9 @@ fn test_palette_optimize<P: Palette<i32>>(mut palette: P, amount_unique_inserts:
     palette.optimize();
     assert_eq!(palette.len(), old_len);
     for i in (0..palette.len() as u64).step_by(2) {
-        palette.get_mut_by_value(&(i as i32)).unwrap().count = 0;
-        palette.mark_as_unused(i);
+        let (entry, index) = palette.get_mut_by_value(&(i as i32)).unwrap();
+        entry.count = 0;
+        palette.mark_as_unused(index);
     }
     for i in (0..control.len()).rev().step_by(2) {
         control.remove(i);
@@ -141,6 +132,7 @@ fn test_palette_optimize<P: Palette<i32>>(mut palette: P, amount_unique_inserts:
             palette
                 .get_mut_by_value(&control_value.value)
                 .unwrap()
+                .0
                 .count,
             control_value.count
         );

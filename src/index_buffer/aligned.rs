@@ -9,15 +9,8 @@ pub struct AlignedIndexBuffer {
 }
 
 impl AlignedIndexBuffer {
-    pub fn new() -> Self {
-        Self {
-            index_size: 0,
-            len: 0,
-            storage: Vec::new(),
-        }
-    }
-
     fn set_index_with_index_size(&mut self, offset: usize, index_size: usize, index: u64) {
+        debug_assert!(index_size > 0);
         let indices_per_u64 = 64 / index_size as usize;
         let target_u64 = &mut self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
@@ -27,6 +20,9 @@ impl AlignedIndexBuffer {
     }
 
     fn get_index_with_index_size(&self, offset: usize, index_size: usize) -> u64 {
+        if index_size == 0 {
+            return 0;
+        }
         let indices_per_u64 = 64 / index_size as usize;
         let target_u64 = &self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
@@ -36,6 +32,14 @@ impl AlignedIndexBuffer {
 }
 
 impl IndexBuffer for AlignedIndexBuffer {
+    fn new() -> Self {
+        Self {
+            index_size: 0,
+            len: 0,
+            storage: Vec::new(),
+        }
+    }
+
     fn set_index_size(&mut self, new_size: usize, new_mapping: Option<HashMap<u64, u64>>) {
         if new_size > self.index_size {
             // Index size grew, grow storage if needed and adjust indices
@@ -64,6 +68,12 @@ impl IndexBuffer for AlignedIndexBuffer {
                 }
             }
         } else if new_size < self.index_size {
+            if new_size == 0 {
+                debug_assert!(new_mapping.is_none());
+                self.index_size = 0;
+                self.storage.clear();
+                return;
+            }
             // Index size shrinked, keep storage size and adjust indices
             if let Some(mapping) = new_mapping {
                 // Mapping provided, adjust indices
@@ -93,6 +103,10 @@ impl IndexBuffer for AlignedIndexBuffer {
     }
 
     fn push_index(&mut self, index: u64) {
+        if self.index_size == 0 {
+            self.len += 1;
+            return;
+        }
         let indices_per_u64 = 64 / self.index_size as usize;
 
         // Check if we need a new storage u64
@@ -110,6 +124,10 @@ impl IndexBuffer for AlignedIndexBuffer {
     fn pop_index(&mut self) -> Option<u64> {
         if self.len == 0 {
             return None;
+        }
+        if self.index_size == 0 {
+            self.len -= 1;
+            return Some(0);
         }
         let indices_per_u64 = 64 / self.index_size as usize;
 

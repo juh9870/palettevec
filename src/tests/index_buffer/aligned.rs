@@ -86,10 +86,16 @@ fn index_buffer_get() {
 }
 
 #[test]
-fn test_buffer_set() {
+fn index_buffer_set() {
     let mut buffer = AlignedIndexBuffer::new();
     for i in 1..64 {
         test_index_buffer_set(&mut AlignedIndexBuffer::new(), i, 1337);
         test_index_buffer_set(&mut buffer, i, 1337);
     }
+}
+
+#[test]
+fn index_buffer_index_size_0_operations() {
+    let mut buffer = AlignedIndexBuffer::new();
+    test_index_buffer_index_size_0_operations(&mut buffer);
 }

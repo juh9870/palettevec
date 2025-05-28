@@ -37,26 +37,25 @@ pub(crate) fn calculate_smallest_index_size(n: u32) -> u32 {
 }
 
 pub trait Palette<T: Eq + Clone> {
+    fn new() -> Self;
     /// Returns amount of palette entries with count > 0.
     /// DO NOT use this to calculate index size. Use index_size() instead.
     fn len(&self) -> usize;
     /// Gets the current index size. This can change after insert_new() or optimize().
     fn index_size(&self) -> u32;
 
-    fn get_by_value(&self, value: &T) -> Option<&PaletteEntry<T>>;
-    fn get_mut_by_value(&mut self, value: &T) -> Option<&mut PaletteEntry<T>>;
+    fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, u64)>;
+    fn get_mut_by_value(&mut self, value: &T) -> Option<(&mut PaletteEntry<T>, u64)>;
     fn get_by_index(&self, index: u64) -> Option<&PaletteEntry<T>>;
     fn get_mut_by_index(&mut self, index: u64) -> Option<&mut PaletteEntry<T>>;
-
-    fn get_index_from_value(&self, value: &T) -> Option<u64>;
 
     /// IMPORTANT: Call this immediately after setting a palette entries count to 0.
     fn mark_as_unused(&mut self, index: u64);
 
     /// Assumes that the palette doesn't contain this value yet.
-    /// Returns the new index.
+    /// Returns the new index and the new index size if needed.
     /// This function is not allowed to change any of the other indices.
-    fn insert_new(&mut self, entry: PaletteEntry<T>) -> u64;
+    fn insert_new(&mut self, entry: PaletteEntry<T>) -> (u64, Option<usize>);
     /// Optimizes the palette and returns the mapping of old_index -> new_index
     /// if necessary.
     fn optimize(&mut self) -> Option<HashMap<u64, u64>>;

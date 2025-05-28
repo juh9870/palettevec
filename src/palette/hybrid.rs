@@ -24,16 +24,6 @@ enum HybridStorage<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> 
 impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
     HybridPalette<INLINE_PALETTE_THRESHOLD, T>
 {
-    pub fn new() -> Self {
-        Self {
-            index_size: 0,
-            real_entries: 0,
-            storage: HybridStorage::Array {
-                array: [const { None }; INLINE_PALETTE_THRESHOLD],
-            },
-        }
-    }
-
     fn switch_to_hashmap(&mut self) {
         match &mut self.storage {
             HybridStorage::HashMap { .. } => unreachable!(),
@@ -43,6 +33,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
                 let mut value_map = HashMap::new();
                 for (i, entry) in array.iter().enumerate() {
                     if let Some(entry) = entry {
+                        debug_assert!(entry.count > 0);
                         value_map.insert(entry.value.clone(), i as u64);
                         index_map.insert(i as u64, entry.clone());
                     } else {
@@ -107,6 +98,16 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
 impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
     for HybridPalette<INLINE_PALETTE_THRESHOLD, T>
 {
+    fn new() -> Self {
+        Self {
+            index_size: 0,
+            real_entries: 0,
+            storage: HybridStorage::Array {
+                array: [const { None }; INLINE_PALETTE_THRESHOLD],
+            },
+        }
+    }
+
     fn len(&self) -> usize {
         self.real_entries as usize
     }
@@ -118,7 +119,9 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
     fn mark_as_unused(&mut self, index: u64) {
         self.real_entries -= 1;
         match &mut self.storage {
-            HybridStorage::Array { .. } => return,
+            HybridStorage::Array { array, .. } => {
+                array[index as usize] = None;
+            }
             HybridStorage::HashMap {
                 free_indices,
                 index_map,
@@ -132,13 +135,13 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         }
     }
 
-    fn get_by_value(&self, value: &T) -> Option<&PaletteEntry<T>> {
+    fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, u64)> {
         match &self.storage {
             HybridStorage::Array { array, .. } => {
-                for entry in array.iter() {
+                for (index, entry) in array.iter().enumerate() {
                     if let Some(entry) = entry {
                         if &entry.value == value {
-                            return Some(entry);
+                            return Some((entry, index as u64));
                         }
                     }
                 }
@@ -152,18 +155,18 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 let Some(index) = value_map.get(value) else {
                     return None;
                 };
-                return index_map.get(index);
+                return index_map.get(index).map(|entry| (entry, *index));
             }
         }
     }
 
-    fn get_mut_by_value(&mut self, value: &T) -> Option<&mut PaletteEntry<T>> {
+    fn get_mut_by_value(&mut self, value: &T) -> Option<(&mut PaletteEntry<T>, u64)> {
         match &mut self.storage {
             HybridStorage::Array { array, .. } => {
-                for entry in array.iter_mut() {
+                for (index, entry) in array.iter_mut().enumerate() {
                     if let Some(entry) = entry {
                         if &entry.value == value {
-                            return Some(entry);
+                            return Some((entry, index as u64));
                         }
                     }
                 }
@@ -177,7 +180,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 let Some(index) = value_map.get(value) else {
                     return None;
                 };
-                return index_map.get_mut(index);
+                return index_map.get_mut(index).map(|entry| (entry, *index));
             }
         }
     }
@@ -196,23 +199,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         }
     }
 
-    fn get_index_from_value(&self, value: &T) -> Option<u64> {
-        match &self.storage {
-            HybridStorage::Array { array, .. } => {
-                for (i, entry) in array.iter().enumerate() {
-                    if let Some(entry) = entry {
-                        if entry.value == *value {
-                            return Some(i as u64);
-                        }
-                    }
-                }
-                None
-            }
-            HybridStorage::HashMap { value_map, .. } => value_map.get(value).copied(),
-        }
-    }
-
-    fn insert_new(&mut self, entry: PaletteEntry<T>) -> u64 {
+    fn insert_new(&mut self, entry: PaletteEntry<T>) -> (u64, Option<usize>) {
         debug_assert!(entry.count > 0);
         match &mut self.storage {
             HybridStorage::Array { array, .. } => {
@@ -222,10 +209,12 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                         *old_entry = Some(entry);
                         self.real_entries += 1;
                         let new_index_size = calculate_smallest_index_size(self.real_entries);
+                        let mut actual_new_index_size = None;
                         if new_index_size > self.index_size {
                             self.index_size = new_index_size;
+                            actual_new_index_size = Some(new_index_size as usize);
                         }
-                        return i as u64;
+                        return (i as u64, actual_new_index_size);
                     }
                 }
                 // No free spot available, need to swich to hashmap
@@ -241,7 +230,8 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 if let Some(index) = free_indices.pop() {
                     value_map.insert(entry.value.clone(), index);
                     index_map.insert(index, entry);
-                    return index;
+                    self.real_entries += 1;
+                    return (index, None);
                 }
 
                 // No free index available, create a new one
@@ -250,10 +240,12 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 index_map.insert(index, entry);
                 self.real_entries += 1;
                 let new_index_size = calculate_smallest_index_size(self.real_entries);
+                let mut actual_new_index_size = None;
                 if new_index_size > self.index_size {
                     self.index_size = new_index_size;
+                    actual_new_index_size = Some(new_index_size as usize);
                 }
-                index
+                (index, actual_new_index_size)
             }
         }
     }

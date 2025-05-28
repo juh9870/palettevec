@@ -1,11 +1,6 @@
-use crate::palette::hybrid::HybridPalette;
+use crate::palette::{hybrid::HybridPalette, Palette};
 
-use super::{
-    test_palette_get_by_index, test_palette_get_index_from_value, test_palette_index_size,
-    test_palette_index_size_after_optimizing, test_palette_insert_new, test_palette_len,
-    test_palette_mark_as_unused, test_palette_mark_as_unused_len, test_palette_optimize,
-    test_pallete_get_by_value,
-};
+use super::*;
 
 #[test]
 fn palette_insert_new() {
@@ -75,20 +70,6 @@ fn palette_get_by_index() {
     test_palette_get_by_index(HybridPalette::<32, i32>::new(), 2049);
     test_palette_get_by_index(HybridPalette::<127, i32>::new(), 2049);
     test_palette_get_by_index(HybridPalette::<33333, i32>::new(), 3589);
-}
-
-#[test]
-fn palette_get_index_from_value() {
-    test_palette_get_index_from_value(HybridPalette::<0, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<1, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<2, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<3, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<4, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<5, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<17, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<32, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<127, i32>::new(), 2049);
-    test_palette_get_index_from_value(HybridPalette::<33333, i32>::new(), 3589);
 }
 
 #[test]

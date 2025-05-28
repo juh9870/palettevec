@@ -3,6 +3,7 @@ use std::collections::HashMap;
 pub(crate) mod aligned;
 
 pub trait IndexBuffer {
+    fn new() -> Self;
     /// Call this every time the index buffer is resized.
     /// New mapping is <old_index, new_index>
     ///
