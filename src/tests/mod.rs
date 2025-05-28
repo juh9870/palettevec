@@ -1,4 +1,5 @@
 pub(crate) mod implementations;
+mod index_buffer;
 mod palette;
 
 /// Controls the amount of iterations that RNG tests do.

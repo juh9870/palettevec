@@ -1,0 +1,139 @@
+use std::u64;
+
+use crate::index_buffer::IndexBuffer;
+
+mod aligned;
+
+fn test_index_buffer_set_index_size_no_mapping<B: IndexBuffer>(buffer: &mut B, index_size: usize) {
+    buffer.set_index_size(index_size, None);
+}
+
+fn test_index_buffer_push<B: IndexBuffer>(buffer: &mut B, index_size: usize, iteration_count: u32) {
+    buffer.set_index_size(index_size, None);
+    for i in 0..iteration_count as u64 {
+        buffer.push_index(i);
+    }
+}
+
+fn test_index_buffer_pop<B: IndexBuffer>(buffer: &mut B, index_size: usize, iteration_count: u32) {
+    assert_eq!(buffer.pop_index(), None);
+    buffer.set_index_size(index_size, None);
+    for i in 0..iteration_count as u64 {
+        let index = i & (u64::MAX >> (64 - index_size));
+        buffer.push_index(index);
+        assert_eq!(buffer.pop_index(), Some(index));
+        assert_eq!(buffer.pop_index(), None);
+    }
+    for i in 0..iteration_count as u64 {
+        let index = i & (u64::MAX >> (64 - index_size));
+        buffer.push_index(index);
+    }
+    for i in (0..iteration_count as u64).rev() {
+        let index = i & (u64::MAX >> (64 - index_size));
+        assert_eq!(buffer.pop_index(), Some(index));
+    }
+    assert_eq!(buffer.pop_index(), None);
+}
+
+fn test_index_buffer_set_index_size_growing<B: IndexBuffer>(
+    buffer: &mut B,
+    index_sizes: &mut Vec<usize>,
+    iteration_count: u32,
+) {
+    assert_eq!(buffer.pop_index(), None);
+    index_sizes.sort();
+
+    let lowest_index_size = index_sizes[0];
+    buffer.set_index_size(lowest_index_size, None);
+    for i in 0..iteration_count as u64 {
+        let index = i & (u64::MAX >> (64 - lowest_index_size));
+        buffer.push_index(index);
+    }
+
+    for index_size in index_sizes.iter().skip(1) {
+        buffer.set_index_size(*index_size, None);
+        for i in (0..iteration_count as u64).rev() {
+            let index = i & (u64::MAX >> (64 - lowest_index_size));
+            assert_eq!(buffer.pop_index(), Some(index));
+        }
+        assert_eq!(buffer.pop_index(), None);
+        for i in 0..iteration_count as u64 {
+            let index = i & (u64::MAX >> (64 - lowest_index_size));
+            buffer.push_index(index);
+        }
+    }
+
+    for i in (0..iteration_count as u64).rev() {
+        let index = i & (u64::MAX >> (64 - lowest_index_size));
+        assert_eq!(buffer.pop_index(), Some(index));
+    }
+    assert_eq!(buffer.pop_index(), None);
+}
+
+fn test_index_buffer_set_index_size_shrinking<B: IndexBuffer>(
+    buffer: &mut B,
+    index_sizes: &mut Vec<usize>,
+    iteration_count: u32,
+) {
+    assert_eq!(buffer.pop_index(), None);
+    index_sizes.sort();
+    index_sizes.reverse();
+
+    let highest_index_size = index_sizes[0];
+    buffer.set_index_size(highest_index_size, None);
+    for _ in 0..iteration_count as u64 {
+        buffer.push_index(1);
+    }
+
+    for index_size in index_sizes.iter().skip(1) {
+        buffer.set_index_size(*index_size, None);
+        for _ in 0..iteration_count as u64 {
+            assert_eq!(buffer.pop_index(), Some(1));
+        }
+        assert_eq!(buffer.pop_index(), None);
+        for _ in 0..iteration_count as u64 {
+            buffer.push_index(1);
+        }
+    }
+
+    for _ in 0..iteration_count as u64 {
+        assert_eq!(buffer.pop_index(), Some(1));
+    }
+    assert_eq!(buffer.pop_index(), None);
+}
+
+fn test_index_buffer_get<B: IndexBuffer>(buffer: &mut B, index_size: usize, iteration_count: u32) {
+    assert_eq!(buffer.pop_index(), None);
+    buffer.set_index_size(index_size, None);
+    let possible_different_indices = 2 << (index_size - 1);
+    for i in 0..iteration_count as u64 {
+        let index = i % possible_different_indices;
+        buffer.push_index(index);
+    }
+    for i in 0..iteration_count as u64 {
+        assert_eq!(buffer.get_index(i as usize), i % possible_different_indices);
+    }
+    for i in (0..iteration_count as u64).rev() {
+        assert_eq!(buffer.pop_index(), Some(i % possible_different_indices));
+    }
+    assert_eq!(buffer.pop_index(), None);
+}
+
+fn test_index_buffer_set<B: IndexBuffer>(buffer: &mut B, index_size: usize, iteration_count: u32) {
+    assert_eq!(buffer.pop_index(), None);
+    buffer.set_index_size(index_size, None);
+    let possible_different_indices = 2 << (index_size - 1);
+    for i in 0..iteration_count as u64 {
+        let index = i % possible_different_indices;
+        buffer.push_index(index);
+    }
+    for i in 0..iteration_count as u64 {
+        let index = (i + 1) % possible_different_indices;
+        buffer.set_index(i as usize, index);
+    }
+    for i in (0..iteration_count as u64).rev() {
+        let index = (i + 1) % possible_different_indices;
+        assert_eq!(buffer.pop_index(), Some(index));
+    }
+    assert_eq!(buffer.pop_index(), None);
+}

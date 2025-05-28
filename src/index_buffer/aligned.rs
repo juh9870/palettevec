@@ -114,12 +114,13 @@ impl IndexBuffer for AlignedIndexBuffer {
         let indices_per_u64 = 64 / self.index_size as usize;
 
         let index = self.get_index(self.len - 1);
+        self.len -= 1;
 
         // Check if it's the last index in the storage u64
-        if self.len % indices_per_u64 == 1 {
+        if self.len % indices_per_u64 == 0 {
             self.storage.pop();
         }
-        self.len -= 1;
+
         Some(index)
     }
 
