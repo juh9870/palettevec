@@ -1,928 +1,168 @@
-use rustc_hash::FxHashMap;
-use std::{hash::Hash, ops::Index};
+use std::{hash::Hash, marker::PhantomData};
 
-/// A palette compressed vector.
-#[derive(PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
-pub struct PaletteVec<T: Eq + Hash + Clone> {
-    palette: Vec<(T, u32)>,
-    indices: Vec<u64>,
-    /// Amount of bits unused in last u64
-    padding_in_last_u64: u8,
-    index_size: u8,
-    len: usize,
+use index_buffer::IndexBuffer;
+use palette::{Palette, PaletteEntry};
+
+pub mod index_buffer;
+pub mod palette;
+
+#[cfg(test)]
+pub(crate) mod tests;
+
+pub struct PaletteVec<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> {
+    palette: P,
+    buffer: B,
+    phantom: PhantomData<T>,
 }
 
-impl<T: Eq + Hash + Clone> PaletteVec<T> {
+impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
     pub fn new() -> Self {
         Self {
-            palette: Vec::new(),
-            indices: Vec::new(),
-            padding_in_last_u64: 0,
-            index_size: 1,
-            len: 0,
+            palette: P::new(),
+            buffer: B::new(),
+            phantom: PhantomData,
         }
     }
 
-    pub fn index_iterator(&self) -> IndexIterator {
-        IndexIterator {
-            index_size: self.index_size,
-            indices: &self.indices,
-            padding_last_u64: self.padding_in_last_u64,
-            current_u64: 0,
-            current_offset: 0,
+    pub fn filled(value: T, len: usize) -> Self {
+        let mut palette = P::new();
+        let (index, index_size) = palette.insert_new(PaletteEntry {
+            value,
+            count: len as u32,
+        });
+        debug_assert_eq!(index, 0);
+        let mut buffer = B::new();
+        if let Some(index_size) = index_size {
+            buffer.set_index_size(index_size, None);
         }
-    }
+        buffer.zeroed(len);
 
-    /// Grows the index size if it's needed to accomodate for a new palette entry.
-    fn grow_index_size_if_needed(&mut self) {
-        if self.palette.len() >= 1 << self.index_size {
-            self.grow_index_size();
+        Self {
+            palette,
+            buffer,
+            phantom: PhantomData,
         }
-    }
-
-    fn grow_index_size(&mut self) {
-        let mut new_vec: PaletteVec<T> = PaletteVec::new();
-        new_vec.indices = Vec::with_capacity(self.indices.len() * 2);
-        new_vec.palette = self.palette.clone();
-        new_vec.index_size = self.index_size + 1;
-        for index in self.index_iterator() {
-            new_vec.push_index(index);
-        }
-        self.index_size = new_vec.index_size;
-        self.indices = new_vec.indices;
-        self.padding_in_last_u64 = new_vec.padding_in_last_u64;
-        debug_assert!(self.palette == new_vec.palette);
-    }
-
-    fn push_index(&mut self, index: u64) {
-        debug_assert!(index.leading_zeros() >= 64 - self.index_size as u32);
-        if self.padding_in_last_u64 < self.index_size || self.indices.is_empty() {
-            self.indices.push(0);
-            self.padding_in_last_u64 = 64;
-        }
-        let len = self.indices.len();
-        let last_u64 = &mut self.indices[len - 1];
-        *last_u64 |= index << (self.padding_in_last_u64 - self.index_size);
-        self.padding_in_last_u64 -= self.index_size;
-    }
-
-    /// Pops the last index from the indices vector and adjusts the padding in the last u64.
-    /// This does not do any palette manipulation.
-    fn pop_index(&mut self) -> Option<u64> {
-        if self.indices.is_empty() {
-            return None;
-        }
-        let len = self.indices.len();
-        let last_u64 = &mut self.indices[len - 1];
-
-        let shift = self.padding_in_last_u64;
-        let mask = (1 << self.index_size) - 1;
-        let index = (*last_u64 >> shift) & mask;
-
-        *last_u64 &= !(mask << shift);
-
-        self.padding_in_last_u64 += self.index_size;
-
-        if self.padding_in_last_u64 == 64 {
-            self.indices.pop();
-            self.padding_in_last_u64 = 64 % self.index_size;
-        }
-        Some(index)
-    }
-
-    fn get_index(&self, index: usize) -> u64 {
-        self.get_index_with_index_size(index, self.index_size)
-    }
-
-    fn get_index_with_index_size(&self, index: usize, index_size: u8) -> u64 {
-        let indices_per_u64 = 64 / index_size as usize;
-        let target_u64 = &self.indices[index / indices_per_u64];
-        let target_offset = 64 - (index % indices_per_u64 + 1) as u8 * index_size;
-        let mask = (1 << index_size) - 1;
-        (*target_u64 >> target_offset) & mask
-    }
-
-    fn set_index(&mut self, index: usize, value: u64) {
-        self.set_index_with_index_size(index, value, self.index_size);
-    }
-
-    fn set_index_with_index_size(&mut self, index: usize, value: u64, index_size: u8) {
-        let indices_per_u64 = 64 / index_size as usize;
-        let target_u64 = &mut self.indices[index / indices_per_u64];
-        let target_offset = 64 - (index % indices_per_u64 + 1) as u8 * index_size;
-        let mask = (1 << index_size) - 1;
-        *target_u64 &= !(mask << target_offset);
-        *target_u64 |= value << target_offset;
-    }
-
-    pub fn push(&mut self, item: T) {
-        // Check if item is in palette
-        let mut index = None;
-        for (i, (entry, count)) in self.palette.iter_mut().enumerate() {
-            if entry == &item {
-                index = Some(i);
-                *count += 1;
-                break;
-            }
-        }
-        if let Some(index) = index {
-            // Item is in palette, just push index
-            self.push_index(index as u64);
-            self.len += 1;
-            return;
-        }
-
-        // Item is not in palette, create new palette entry
-        // - Try replacing an unused palette entry
-        for (i, (entry, count)) in self.palette.iter_mut().enumerate() {
-            if *count == 0 {
-                *count = 1;
-                *entry = item;
-                self.push_index(i as u64);
-                self.len += 1;
-                return;
-            }
-        }
-        // - Need completely new entry
-        self.grow_index_size_if_needed();
-        self.palette.push((item, 1));
-        self.push_index((self.palette.len() - 1) as u64);
-        self.len += 1;
-    }
-
-    pub fn pop(&mut self) -> Option<&T> {
-        let Some(index) = self.pop_index() else {
-            return None;
-        };
-        let (item, count) = self.palette.get_mut(index as usize).unwrap();
-        debug_assert!(*count > 0, "Palette count underflow detected!");
-        *count -= 1;
-        self.len -= 1;
-        Some(item)
     }
 
     pub fn len(&self) -> usize {
-        self.len
+        self.buffer.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.buffer.is_empty()
     }
 
-    pub fn set(&mut self, index: usize, item: T) {
-        if index >= self.len() {
-            panic!("Index out of bounds");
-        }
+    pub fn unique_values(&self) -> usize {
+        self.palette.len()
+    }
 
-        // Get old index and reduce count
-        let indices_per_u64 = 64 / self.index_size as usize;
-        let target_u64 = &mut self.indices[index / indices_per_u64];
-        let target_offset = 64 - (index % indices_per_u64 + 1) as u8 * self.index_size;
-        let mask = (1 << self.index_size) - 1;
-        let old_index = (*target_u64 >> target_offset) & mask;
-        let (old_item, old_count) = self.palette.get_mut(old_index as usize).unwrap();
-        if old_item == &item {
-            // Item is the same, do nothing
-            return;
-        }
-        *old_count -= 1;
-
-        // Check if item is in palette
-        let mut palette_index = None;
-        for (i, (entry, count)) in self.palette.iter_mut().enumerate() {
-            if entry == &item {
-                palette_index = Some(i);
-                *count += 1;
-                break;
+    pub fn push_ref(&mut self, value: &T) {
+        let Some((entry, index)) = self.palette.get_mut_by_value(value) else {
+            // Value is new, insert it into the palette
+            let (index, new_index_size) = self.palette.insert_new(PaletteEntry {
+                value: value.clone(),
+                count: 1,
+            });
+            if let Some(new_index_size) = new_index_size {
+                self.buffer.set_index_size(new_index_size, None);
             }
-        }
-        if let Some(palette_index) = palette_index {
-            // Item is in palette, just push index
-            *target_u64 &= !(mask << target_offset);
-            *target_u64 |= (palette_index as u64) << target_offset;
+            self.buffer.push_index(index);
             return;
-        }
+        };
+        // Value is already in the palette, increment its count
+        entry.count += 1;
+        self.buffer.push_index(index);
+    }
 
-        // Item is not in palette already
-        // - Try replacing old entry
-        for (i, (entry, count)) in self.palette.iter_mut().enumerate() {
-            if *count == 0 {
-                *count = 1;
-                *entry = item;
-                *target_u64 &= !(mask << target_offset);
-                *target_u64 |= (i as u64) << target_offset;
+    /// Prefer `push_ref` when possible, as it avoids cloning the value if the value is already in the palette.
+    pub fn push(&mut self, value: T) {
+        let Some((entry, index)) = self.palette.get_mut_by_value(&value) else {
+            // Value is new, insert it into the palette
+            let (index, new_index_size) = self.palette.insert_new(PaletteEntry { value, count: 1 });
+            if let Some(new_index_size) = new_index_size {
+                self.buffer.set_index_size(new_index_size, None);
+            }
+            self.buffer.push_index(index);
+            return;
+        };
+        // Value is already in the palette, increment its count
+        entry.count += 1;
+        self.buffer.push_index(index);
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+        let index = self.buffer.pop_index()?;
+        let entry = self.palette.get_mut_by_index(index)?;
+        entry.count -= 1;
+        let value = entry.value.clone();
+        if entry.count == 0 {
+            self.palette.mark_as_unused(index);
+        }
+        Some(value)
+    }
+
+    pub fn set(&mut self, offset: usize, value: &T) {
+        let old_index_size = self.palette.index_size();
+        // Check if the value is already in the palette
+        if let Some((entry, index)) = self.palette.get_mut_by_value(value) {
+            if old_index_size == 0 {
+                // Reaching this means we have an index size of 0 and set was called
+                // with an element equal to the only element that exists in the palette vec.
+                // So we can just return;
                 return;
             }
-        }
-        // - Need completely new entry
-        let new_index = self.palette.len();
-        *target_u64 &= !(mask << target_offset);
-        *target_u64 |= (new_index as u64) << target_offset;
-        self.grow_index_size_if_needed();
-        self.palette.push((item, 1));
-    }
-
-    pub fn get(&self, index: usize) -> Option<&T> {
-        if index  >= self.len() {
-            return None;
-        }
-        Some(&self[index])
-    }
-
-    pub fn last(&self) -> Option<&T> {
-        if self.is_empty() {
-            return None;
-        }
-        Some(&self[self.len() - 1])
-    }
-
-    pub fn remove(&mut self, index: usize) -> &T {
-        if index >= self.len() {
-            panic!("Index out of bounds");
-        }
-        // Get old index and reduce count
-        let palette_index = self.get_index(index);
-        let (_, count) = self.palette.get_mut(palette_index as usize).unwrap();
-        *count -= 1;
-
-        // Move all trailing indices one step to the left
-        let len = self.len();
-        for i in index..len - 1 {
-            let index = self.get_index(i + 1);
-            self.set_index(i, index);
-        }
-        
-        self.pop_index();
-        self.len -= 1;
-        // Return the removed item
-        &self.palette.get(palette_index as usize).unwrap().0
-    }
-
-    pub fn swap_remove(&mut self, index: usize) -> &T {
-        if index >= self.len() {
-            panic!("Index out of bounds");
-        }
-        if index == self.len() - 1 {
-            return self.pop().unwrap();
-        }
-        // Get old index and reduce count
-        let palette_index = self.get_index(index);
-        let (_, count) = self.palette.get_mut(palette_index as usize).unwrap();
-        *count -= 1;
-
-        // Move last index to the removed index
-        let last = self.get_index(self.len() - 1);
-        self.set_index(index, last);
-        self.pop_index();
-        self.len -= 1;
-
-        &self.palette.get(palette_index as usize).unwrap().0
-    }
-
-    pub fn insert(&mut self, index: usize, item: T) {
-        if index > self.len() {
-            panic!("Index out of bounds");
-        }
-        // Move all trailing indices one step to the right
-        let len = self.len();
-        let last = self.get_index(len - 1);
-        self.push_index(last);
-        for i in (index..len - 1).rev() {
-            let index = self.get_index(i);
-            self.set_index(i + 1, index);
-        }
-
-        // Does item already exist in palette?
-        let mut palette_index = None;
-        for (i, (entry, count)) in self.palette.iter_mut().enumerate() {
-            if entry == &item {
-                palette_index = Some(i);
-                *count += 1;
-                break;
+            let old_index = self.buffer.set_index(offset, index);
+            if old_index != index {
+                entry.count += 1;
+                let old_entry = self.palette.get_mut_by_index(old_index).unwrap();
+                old_entry.count -= 1;
+                if old_entry.count == 0 {
+                    self.palette.mark_as_unused(old_index);
+                }
             }
-        }
-        if let Some(palette_index) = palette_index {
-            self.set_index(index, palette_index as u64);
-            self.len += 1;
             return;
         }
 
-        // Can we reuse an existing palette entry?
-        for (i, (entry, count)) in self.palette.iter_mut().enumerate() {
-            if *count == 0 {
-                *count = 1;
-                *entry = item;
-                self.set_index(index, i as u64);
-                self.len += 1;
-                return;
-            }
+        // Value is new, insert into palette
+        let (new_index, new_index_size) = self.palette.insert_new(PaletteEntry {
+            value: value.clone(),
+            count: 1,
+        });
+        if let Some(new_index_size) = new_index_size {
+            self.buffer.set_index_size(new_index_size, None);
         }
-
-        // Need to create a new palette entry
-        self.grow_index_size_if_needed();
-        self.palette.push((item, 1));
-        self.set_index(index, (self.palette.len() - 1) as u64);
-        self.len += 1;
-    }
-
-    pub fn clear(&mut self) {
-        self.palette.clear();
-        self.indices.clear();
-        self.padding_in_last_u64 = 0;
-        self.len = 0;
-        self.index_size = 1;
-    }
-
-    pub fn clear_keep_index_size(&mut self) {
-        self.palette.clear();
-        self.indices.clear();
-        self.padding_in_last_u64 = 0;
-        self.len = 0;
-    }
-
-    pub fn get_palette_entry(&self, item: &T) -> Option<(usize, u32)> {
-        for (i, (entry, count)) in self.palette.iter().enumerate() {
-            if entry == item {
-                return Some((i, *count));
-            }
+        let old_index = self.buffer.set_index(offset, new_index);
+        let old_entry = self.palette.get_mut_by_index(old_index).unwrap();
+        old_entry.count -= 1;
+        if old_entry.count == 0 {
+            self.palette.mark_as_unused(old_index);
         }
-        None
     }
 
-    /// DANGER: If you set the palette entry to an item that is already in the palette,
-    /// two different indices will now exist for the same item. To circumvent this, you should either:
-    /// 
-    /// 1) Only set an item to a palette entry that is not already in the palette OR
-    /// 2) Call optimize after setting the duplicate palette entry.
-    pub fn set_palette_entry(&mut self, palette_index: usize, item: T) {
-        if palette_index >= self.palette.len() {
-            panic!("Index out of bounds.");
+    pub fn get(&self, offset: usize) -> Option<T> {
+        if offset >= self.buffer.len() {
+            return None;
         }
-        self.palette[palette_index].0 = item;
+        let index = self.buffer.get_index(offset);
+        Some(self.palette.get_by_index(index).unwrap().value.clone())
     }
 
     /// Optimizes the palette and indices vector. This is potentially very expensive
     /// and should be done sparingly, but it should be done at some point.
     ///
     /// Most likely you will want to call this: Before serializing the data or
-    /// using heuristics like after a specific number of operations have been done
+    /// using heuristics like after a specific number of set/push operations have been done,
+    /// how large the unique_values() difference is compared to earlier
     /// or how much time has passed since last optimization.
     pub fn optimize(&mut self) {
-        let mut new_palette = FxHashMap::default();
-        for (item, old_count) in &self.palette {
-            if *old_count > 0 {
-                if let Some(count) = new_palette.get_mut(item) {
-                    *count += *old_count;
-                } else {
-                    new_palette.insert(item.clone(), *old_count);
-                }
-            }
-        }
-        let mut new_palette = new_palette.into_iter().collect::<Vec<_>>();
-        new_palette.sort_unstable_by(|a, b| b.1.cmp(&a.1));
-
-        if new_palette.is_empty() {
-            // No palette entries left, clear everything
-            self.clear();
-            return;
-        }
-
-        let index_size = ((new_palette.len() as f64).log2().ceil() as u8).max(1);
-        assert!(index_size <= self.index_size);
-
-        let mut current_u64 = 0;
-        let mut current_indices_index = 0;
-        let mut current_padding = 64;
-        for i in 0..self.len() {
-            let old_index = self.get_index(i);
-            let (item, _) = self.palette.get(old_index as usize).unwrap();
-            let new_index = new_palette
-                .iter()
-                .position(|(entry, _)| entry == item)
-                .unwrap() as u64;
-            if current_padding < index_size {
-                self.indices[current_indices_index] = current_u64;
-                current_indices_index += 1;
-                current_padding = 64;
-                current_u64 = 0;
-            }
-            current_u64 |= new_index << (current_padding - index_size);
-            current_padding -= index_size;
-        }
-        self.indices[current_indices_index] = current_u64;
-        if current_padding < 64 {
-            current_indices_index += 1;
-        }
-        self.indices.truncate(current_indices_index);
-
-        self.palette = new_palette;
-        self.index_size = index_size;
-        self.padding_in_last_u64 = current_padding;
-    }
-
-    /// DANGER: This can create multiple entries with same value, follow the same steps as with [set_palette_entry](fn@PaletteVec::set_palette_entry).
-    pub fn map_palette<M: Eq + Hash + Clone>(&self, mut f: impl FnMut(&T) -> M) -> PaletteVec<M>{
-        PaletteVec{
-            palette: self.palette.iter().map(|(element, count)|(f(element), *count)).collect(),
-            indices: self.indices.clone(),
-            len: self.len,
-            index_size: self.index_size,
-            padding_in_last_u64: self.padding_in_last_u64,
-        }
+        let mapping = self.palette.optimize();
+        let new_index_size = self.palette.index_size();
+        self.buffer.set_index_size(new_index_size, mapping);
     }
 }
 
-pub struct IndexIterator<'a> {
-    index_size: u8,
-    indices: &'a [u64],
-    padding_last_u64: u8,
-    current_u64: usize,
-    current_offset: u8,
-}
-
-#[rustfmt::skip]
-impl<'a> Iterator for IndexIterator<'a> {
-    type Item = u64;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        debug_assert!(self.padding_last_u64 <= 64 - self.index_size);
-        if self.indices.is_empty() {
-            return None;
-        }
-
-        if self.current_u64 == self.indices.len() - 1 && self.current_offset == 64 - self.padding_last_u64 {
-            return None;
-        }
-        if 64 - self.current_offset < self.index_size {
-            self.current_u64 += 1;
-            self.current_offset = 0;
-        }
-        let indices_u64 = self.indices.get(self.current_u64)?;
-        let item = Some((indices_u64 >> (64 - self.current_offset - self.index_size)) & ((1 << self.index_size) - 1));
-        self.current_offset += self.index_size;
-        item
-    }
-}
-
-impl<T: Eq + Hash + Clone> Index<usize> for PaletteVec<T> {
-    type Output = T;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        let indices_per_u64 = 64 / self.index_size as usize;
-        let target_u64 = &self.indices[index / indices_per_u64];
-        let target_offset = 64 - (index % indices_per_u64 + 1) as u8 * self.index_size;
-        let mask = (1 << self.index_size) - 1;
-        let palette_index = (*target_u64 >> target_offset) & mask;
-        let (item, _) = self.palette.get(palette_index as usize).unwrap();
-        item
-    }
-}
-
-pub struct PaletteVecIterator<'a, T: Eq + Hash + Clone> {
-    vec: &'a PaletteVec<T>,
-    index: usize,
-}
-
-impl<'a, T: Eq + Hash + Clone> Iterator for PaletteVecIterator<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.index += 1;
-        self.vec.get(self.index - 1)
-    }
-}
-
-/// This clones every item from the palette. This may be expensive.
-pub struct PaletteVecIteratorOwned<T: Eq + Hash + Clone> {
-    vec: PaletteVec<T>,
-    index: usize,
-}
-
-impl<T: Eq + Hash + Clone> Iterator for PaletteVecIteratorOwned<T> {
-    type Item = T;
-
-    /// This clones every item from the palette. This may be expensive.
-    fn next(&mut self) -> Option<Self::Item> {
-        self.index += 1;
-        self.vec.get(self.index - 1).cloned()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use rand::{rng, Rng};
-
-    use super::*;
-
-    #[test]
-    fn test_pushing_doesnt_panic() {
-        let mut vec = PaletteVec::new();
-        for i in 0..200 {
-            for j in 0..i {
-                vec.push(j);
-            }
-        }
-    }
-
-    #[test]
-    fn test_popping_empty() {
-        let mut vec = PaletteVec::<u32>::new();
-        for _ in 0..200 {
-            assert_eq!(vec.pop(), None);
-        }
-    }
-
-    #[test]
-    fn test_pushing_and_popping() {
-        let mut vec = PaletteVec::new();
-        for i in 0..1000 {
-            vec.push(i);
-            assert_eq!(vec.pop(), Some(&i));
-        }
-        assert_eq!(vec.pop(), None);
-        assert!(vec.is_empty());
-    }
-
-    #[test]
-    fn test_pushing_and_popping2() {
-        let mut vec = PaletteVec::new();
-        for i in 0..500 {
-            for j in 0..i {
-                vec.push(j);
-            }
-            for j in (0..i).rev() {
-                assert_eq!(vec.pop(), Some(&j));
-            }
-        }
-        assert_eq!(vec.pop(), None);
-
-        for i in 0..500 {
-            for j in 0..i {
-                vec.push(j);
-            }
-            for j in (0..i).rev() {
-                assert_eq!(vec.pop(), Some(&j));
-            }
-        }
-        assert_eq!(vec.pop(), None);
-    }
-
-    #[test]
-    fn test_push_pop_random() {
-        let mut vec = PaletteVec::<u32>::new();
-        let mut control = Vec::<u32>::new();
-        for _ in 0..30 {
-            for _ in 0..1000 {
-                let i = rand::random::<u32>() % 333;
-                vec.push(i);
-                control.push(i);
-            }
-            for _ in 0..1000 {
-                let i = control.pop().unwrap();
-                assert_eq!(vec.pop(), Some(&i));
-            }
-            assert_eq!(vec.pop(), None);
-        }
-    }
-
-    #[test]
-    fn test_set() {
-        let mut vec = PaletteVec::new();
-        for i in 0..1000 {
-            vec.push(i);
-        }
-        for i in 0..1000 {
-            vec.set(i, i + 1000);
-        }
-        for i in (0..1000).rev() {
-            assert_eq!(vec.pop(), Some(&(i + 1000)));
-        }
-        assert_eq!(vec.pop(), None);
-    }
-
-    #[test]
-    fn test_set_random() {
-        let mut vec = PaletteVec::new();
-        let mut control = Vec::<u32>::new();
-        for _ in 0..30 {
-            for _ in 0..1000 {
-                let i = rand::random::<u32>() % 333;
-                vec.push(i);
-                control.push(i);
-            }
-            for _ in 0..1000 {
-                let i = rand::random::<u32>() % 333;
-                let j = rand::random::<u32>() % 333;
-                vec.set(i as usize, j);
-                control[i as usize] = j;
-            }
-            for _ in 0..1000 {
-                let i = control.pop().unwrap();
-                assert_eq!(vec.pop(), Some(&i));
-            }
-            assert_eq!(vec.pop(), None);
-        }
-    }
-
-    #[test]
-    fn test_get() {
-        let mut vec = PaletteVec::new();
-        for _ in 0..33 {
-            for i in 0..1000 {
-                vec.push(i);
-            }
-            for i in 0..1000 {
-                assert_eq!(vec.get(i), Some(&i));
-            }
-            for i in (0..1000).rev() {
-                assert_eq!(vec.pop(), Some(&i));
-            }
-        }
-    }
-
-    #[test]
-    fn test_last() {
-        let mut vec = PaletteVec::new();
-        for _ in 0..33 {
-            for i in 0..1000 {
-                vec.push(i);
-                assert_eq!(vec.last(), Some(&i));
-            }
-            for i in (0..1000).rev() {
-                assert_eq!(vec.pop(), Some(&i));
-            }
-        }
-    }
-
-    #[test]
-    fn test_remove() {
-        let mut vec = PaletteVec::new();
-        for _ in 0..33 {
-            for i in 0..1000 {
-                vec.push(i);
-            }
-            for i in 0..1000 {
-                assert_eq!(vec.remove(0), &i);
-            }
-            assert_eq!(vec.pop(), None);
-        }
-    }
-
-    #[test]
-    fn test_remove_random() {
-        let mut rng = rand::rng();
-        let mut vec = PaletteVec::<u32>::new();
-        let mut control = Vec::<u32>::new();
-        for _ in 0..33 {
-            for _ in 0..500 {
-                let n = rng.random_range(0..333);
-                vec.push(n);
-                control.push(n);
-            }
-            for _ in 0..300 {
-                let i = rng.random_range(0..control.len());
-                vec.remove(i);
-                control.remove(i);
-            }
-            for i in 0..control.len() {
-                assert_eq!(vec.get(i), Some(&control[i]));
-            }
-        }
-    }
-
-    #[test]
-    fn test_swap_remove() {
-        let mut vec = PaletteVec::<u32>::new();
-        let mut control = Vec::<u32>::new();
-        for _ in 0..11 {
-            for i in 0..1000 {
-                vec.push(i);
-                control.push(i);
-            }
-            for _ in 0..1000 {
-                assert_eq!(*vec.swap_remove(0), control.swap_remove(0));
-            }
-            assert_eq!(vec.pop(), None);
-        }
-    }
-
-    #[test]
-    fn test_swap_remove_random() {
-        let mut rng = rand::rng();
-        let mut vec = PaletteVec::<u32>::new();
-        let mut control = Vec::<u32>::new();
-        for _ in 0..33 {
-            for _ in 0..500 {
-                let n = rng.random_range(0..333);
-                vec.push(n);
-                control.push(n);
-            }
-            for _ in 0..333 {
-                let i = rng.random_range(0..control.len());
-                assert_eq!(*vec.swap_remove(i), control.swap_remove(i));
-            }
-            for i in 0..control.len() {
-                assert_eq!(vec.get(i), Some(&control[i]));
-            }
-        }
-    }
-
-    #[test]
-    fn test_insert() {
-        let mut vec = PaletteVec::new();
-        for i in 0..1000 {
-            vec.push(i);
-        }
-        for i in 0..1000 {
-            vec.insert(i, i + 1000);
-        }
-        for i in (0..1000).rev() {
-            assert_eq!(vec.get(i), Some(&(i + 1000)));
-        }
-    }
-
-    #[test]
-    fn test_insert_random() {
-        let mut vec = PaletteVec::<u32>::new();
-        let mut control = Vec::<u32>::new();
-        for _ in 0..33 {
-            for _ in 0..500 {
-                let i = rand::random::<u32>() % 333;
-                vec.push(i);
-                control.push(i);
-            }
-            for _ in 0..500 {
-                let i = rand::random::<u32>() % 333;
-                let j = rand::random::<u32>() % 333;
-                vec.insert(i as usize, j);
-                control.insert(i as usize, j);
-            }
-            for i in 0..500 {
-                assert_eq!(vec.get(i), Some(&control[i]));
-            }
-        }
-    }
-
-    #[test]
-    fn test_clear() {
-        let mut vec = PaletteVec::new();
-        for _ in 0..33 {
-            for i in 0..1000 {
-                vec.push(i);
-            }
-            vec.clear();
-            assert_eq!(vec.pop(), None);
-        }
-    }
-
-    #[test]
-    fn test_clear_keep_index_size() {
-        let mut vec = PaletteVec::new();
-        for _ in 0..33 {
-            for i in 0..1000 {
-                vec.push(i);
-            }
-            vec.clear_keep_index_size();
-            assert_eq!(vec.pop(), None);
-        }
-    }
-
-    #[test]
-    fn test_optimize() {
-        let mut rng = rng();
-        let mut vec = PaletteVec::new();
-        let mut control = Vec::<u32>::new();
-        for _ in 0..203 {
-            for i in 0..rng.random_range(100..1000) {
-                vec.push(i);
-                control.push(i);
-            }
-            for _ in 0..rng.random_range(10..90) {
-                let i = rng.random_range(0..control.len());
-                vec.remove(i);
-                control.remove(i);
-            }
-            for _ in 0..rng.random_range(10..90) {
-                let i = rng.random_range(0..control.len());
-                let n = rng.random_range(0..333);
-                vec.insert(i, n);
-                control.insert(i, n);
-            }
-            vec.optimize();
-        }
-        assert_eq!(vec.len(), control.len());
-        for i in 0..control.len() {
-            assert_eq!(vec.get(i), Some(&control[i]));
-        }
-    }
-
-    #[test]
-    fn test_large() {
-        let mut rng = rng();
-        let mut vec = PaletteVec::<u32>::new();
-        vec.optimize();
-        let mut control = Vec::<u32>::new();
-        for _ in 0..500 {
-            // Push 200 random numbers
-            for _ in 0..300 {
-                let n = rng.random_range(0..514);
-                vec.push(n);
-                control.push(n);
-            }
-            // Remove first number
-            vec.remove(0);
-            control.remove(0);
-            // Remove 100 random numbers
-            for _ in 0..100 {
-                let i = rng.random_range(0..control.len());
-                vec.remove(i as usize);
-                control.remove(i as usize);
-            }
-            // Insert 100 random numbers
-            for _ in 0..100 {
-                let i = rng.random_range(0..control.len());
-                let n = rng.random_range(0..514);
-                vec.insert(i as usize, n);
-                control.insert(i as usize, n);
-            }
-            // Pop random numbers
-            for _ in 0..100 {
-                assert_eq!(vec.pop(), control.pop().as_ref());
-            }
-            // Swap remove random numbers
-            for _ in 0..100 {
-                let i = rng.random_range(0..control.len());
-                assert_eq!(
-                    vec.swap_remove(i as usize),
-                    &control.swap_remove(i as usize)
-                );
-            }
-            // Optimize randomly
-            if rng.random_bool(0.25) {
-                vec.optimize();
-            }
-            assert!(vec.len() == control.len());
-        }
-        vec.optimize();
-        assert_eq!(vec.len(), control.len());
-        while let Some(i) = vec.pop() {
-            assert_eq!(i, &control.pop().unwrap());
-        }
-        vec.optimize();
-        assert_eq!(vec.len(), 0);
-        assert_eq!(vec.index_size, 1);
-    }
-
-    #[test]
-    fn test_optimize_size() {
-        let mut vec = PaletteVec::new();
-        for i in 0..1000 {
-            vec.push(i);
-        }
-        for _ in 0..999 {
-            vec.pop();
-        }
-        vec.optimize();
-        assert_eq!(vec.index_size, 1);
-        assert_eq!(vec.len(), 1);
-        assert_eq!(vec.palette.len(), 1);
-        assert_eq!(vec.indices.len(), 1);
-    }
-
-    #[test]
-    fn test_replacing_palette_entry() {
-        let mut vec = PaletteVec::new();
-        for i in 0..1000 {
-            vec.push(i % 2);
-        }
-        let (index, _) = vec.get_palette_entry(&0).unwrap();
-        vec.set_palette_entry(index, 1);
-        vec.optimize();
-        while let Some(i) = vec.pop() {
-            assert_eq!(i, &1);
-        }
-    }
-
-    #[test]
-    fn test_palette_map() {
-        let mut vec = PaletteVec::new();
-        for i in 0..100 {
-            vec.push(i);
-        }
-        let mapped = vec.map_palette(|entry|Some(100-entry));
-        for i in 0..100 {
-            assert_eq!(*mapped.get(i).unwrap(), Some(100-i));
-        }
-    }
-
-    #[test]
-    fn test_get_checked(){
-        let mut vec = PaletteVec::new();
-        vec.push(1);
-        assert_eq!(vec.get(0).cloned(), Some(1));
-        assert_eq!(vec.get(1), None);
+impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> Default for PaletteVec<T, P, B> {
+    fn default() -> Self {
+        Self::new()
     }
 }
