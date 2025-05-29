@@ -1,0 +1,47 @@
+name: Coverage Badge
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Rust & cargo-llvm-cov
+        run: |
+          rustup update stable
+          cargo install cargo-llvm-cov
+
+      - name: Run coverage report
+        # produce only the JSON summary
+        run: cargo llvm-cov --json --summary-only --output-path coverage.json  
+
+      - name: Extract line coverage %
+        id: extract
+        run: |
+          COVERAGE=$(jq '.totals.line_percent' coverage.json)
+          # make available to subsequent steps
+          echo "coverage=$COVERAGE" >> $GITHUB_ENV
+
+      - name: Publish badge to Gist
+        uses: schneegans/dynamic-badges-action@v1.7.0  
+        with:
+          # GitHub PAT with gist permissions
+          auth: ${{ secrets.GIST_TOKEN }}
+          # your public Gist ID
+          gistID: ${{ secrets.COVERAGE_GIST_ID }}
+          # file inside the Gist to update
+          filename: palettevec_test_coverage.json
+          label: coverage
+          message: ${{ env.coverage }}%
+          # gradient: red at ≤50%, green at ≥90%
+          minColorRange: 50
+          maxColorRange: 90
+          valColorRange: ${{ env.coverage }}
