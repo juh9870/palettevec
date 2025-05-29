@@ -1,3 +1,5 @@
+![Coverage](https://img.shields.io/endpoint?url=https://gist.github.com/alexdesander/2bb1bb9e61798b07ce8eabb2f9c9dec3)
+
 # PaletteVec
 
 **PaletteVec is space efficient data structure for storing and managing items with a limited set of repeated elements, using a palette-based encoding scheme.**
