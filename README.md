@@ -1,4 +1,4 @@
-![Coverage](https://img.shields.io/endpoint?url=https://gist.github.com/alexdesander/2bb1bb9e61798b07ce8eabb2f9c9dec3)
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alexdesander/2bb1bb9e61798b07ce8eabb2f9c9dec3/raw/14cdb9e20b05a426b092f7e07105574bf8b455e0/palettevec_test_coverage.json)
 
 # PaletteVec
 
