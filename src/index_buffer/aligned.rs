@@ -99,7 +99,7 @@ impl IndexBuffer for AlignedIndexBuffer {
             if new_size == 0 {
                 if let Some(new_mapping) = new_mapping {
                     debug_assert!(new_mapping.len() == 1);
-                    debug_assert!(new_mapping.values().find(|x| **x == 0).is_some());
+                    debug_assert!(new_mapping.values().any(|x| *x == 0));
                 }
                 self.index_size = 0;
                 self.storage.clear();
