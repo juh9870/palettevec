@@ -62,7 +62,7 @@ where
     assert_eq!(pv.pop(), None);
 }
 
-fn test_palette_vec_len<P, B>(iteration_count: u32)
+fn test_palette_vec_len<P, B>(iteration_count: usize)
 where
     P: Palette<u32>,
     B: IndexBuffer,
@@ -73,18 +73,18 @@ where
     assert_eq!(pv.len(), 0);
     for i in 1..iteration_count + 1 {
         pv.push(0);
-        assert_eq!(pv.len(), i as u64);
+        assert_eq!(pv.len(), i);
         assert!(!pv.is_empty());
     }
     for i in (0..iteration_count).rev() {
         pv.pop();
-        assert_eq!(pv.len(), i as u64);
+        assert_eq!(pv.len(), i);
     }
     assert_eq!(pv.len(), 0);
     assert!(pv.is_empty());
 }
 
-fn test_palette_vec_unique_values<P, B>(amount_unique_values: u32, iteration_count: u32)
+fn test_palette_vec_unique_values<P, B>(amount_unique_values: usize, iteration_count: usize)
 where
     P: Palette<u32>,
     B: IndexBuffer,
@@ -99,18 +99,18 @@ where
     assert_eq!(pv.unique_values(), 0);
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
-        pv.push(value);
+        pv.push(value as u32);
         if i < amount_unique_values {
-            assert_eq!(pv.unique_values(), i as usize + 1);
+            assert_eq!(pv.unique_values(), i + 1);
         }
     }
-    assert_eq!(pv.unique_values(), amount_unique_values as usize);
+    assert_eq!(pv.unique_values(), amount_unique_values);
     for _ in 0..iteration_count {
         pv.pop();
     }
 }
 
-fn test_palette_vec_set<P, B>(amount_unique_values: u32, iteration_count: u32)
+fn test_palette_vec_set<P, B>(amount_unique_values: usize, iteration_count: usize)
 where
     P: Palette<u32>,
     B: IndexBuffer,
@@ -125,22 +125,22 @@ where
     assert_eq!(pv.unique_values(), 0);
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
-        pv.push(value);
+        pv.push(value as u32);
     }
     for i in 0..iteration_count {
         let value = (i + 1) % amount_unique_values;
-        pv.set(i as usize, &value);
+        pv.set(i as usize, &(value as u32));
     }
     for i in (0..iteration_count).rev() {
         let value = (i + 1) % amount_unique_values;
-        assert_eq!(pv.pop(), Some(value));
+        assert_eq!(pv.pop(), Some(value as u32));
     }
     assert_eq!(pv.pop(), None);
     assert_eq!(pv.len(), 0);
     assert_eq!(pv.unique_values(), 0);
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
-        pv.push(value);
+        pv.push(value as u32);
     }
     for i in 0..iteration_count {
         pv.set(i as usize, &0);
@@ -159,22 +159,22 @@ where
     }
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
-        pv.set(i as usize, &value);
-        assert_eq!(pv.get(i as u64), Some(value));
+        pv.set(i as usize, &(value as u32));
+        assert_eq!(pv.get(i), Some(value as u32));
     }
     for i in (0..iteration_count).rev() {
         let value = i % amount_unique_values;
-        assert_eq!(pv.pop(), Some(value));
+        assert_eq!(pv.pop(), Some(value as u32));
     }
     for i in 0..iteration_count {
-        assert_eq!(pv.get(i as u64), None);
+        assert_eq!(pv.get(i), None);
     }
     assert_eq!(pv.pop(), None);
     assert_eq!(pv.len(), 0);
     assert_eq!(pv.unique_values(), 0);
 }
 
-fn test_palette_vec_get<P, B>(amount_unique_values: u32, iteration_count: u32)
+fn test_palette_vec_get<P, B>(amount_unique_values: usize, iteration_count: usize)
 where
     P: Palette<u32>,
     B: IndexBuffer,
@@ -185,33 +185,33 @@ where
     assert_eq!(pv.unique_values(), 0);
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
-        pv.push(value);
-        assert_eq!(pv.get(i as u64), Some(value));
+        pv.push(value as u32);
+        assert_eq!(pv.get(i), Some(value as u32));
     }
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
-        assert_eq!(pv.get(i as u64), Some(value));
+        assert_eq!(pv.get(i), Some(value as u32));
     }
 }
 
-fn test_palette_vec_filled<P, B>(iteration_count: u32)
+fn test_palette_vec_filled<P, B>(iteration_count: usize)
 where
     P: Palette<u32>,
     B: IndexBuffer,
 {
     let mut pv: PaletteVec<u32, P, B> = PaletteVec::filled(7, iteration_count);
     for i in 0..iteration_count {
-        assert_eq!(pv.get(i as u64), Some(7));
+        assert_eq!(pv.get(i), Some(7));
     }
-    assert_eq!(pv.get(iteration_count as u64), None);
+    assert_eq!(pv.get(iteration_count), None);
     for i in 0..iteration_count {
         let value = i % 11;
-        pv.set(i as usize, &value);
-        assert_eq!(pv.get(i as u64), Some(value));
+        pv.set(i as usize, &(value as u32));
+        assert_eq!(pv.get(i), Some(value as u32));
     }
 }
 
-fn test_palette_vec_optimize<P, B>(iteration_count: u32)
+fn test_palette_vec_optimize<P, B>(iteration_count: usize)
 where
     P: Palette<u32>,
     B: IndexBuffer,
@@ -222,26 +222,26 @@ where
     );
     let mut pv: PaletteVec<u32, P, B> = PaletteVec::filled(7, iteration_count);
     assert_eq!(pv.unique_values(), 1);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     pv.optimize();
     assert_eq!(pv.unique_values(), 1);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     pv.set(0, &6);
     assert_eq!(pv.unique_values(), 2);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     pv.optimize();
     assert_eq!(pv.unique_values(), 2);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
-        pv.set(i as usize, &(i % 77));
+        pv.set(i as usize, &(i as u32 % 77));
     }
     assert_eq!(pv.unique_values(), 77);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     pv.optimize();
     assert_eq!(pv.unique_values(), 77);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
-        assert_eq!(pv.get(i as u64), Some(i % 77));
+        assert_eq!(pv.get(i), Some(i as u32 % 77));
     }
     for i in 0..iteration_count {
         if (i % 77) % 3 == 0 {
@@ -249,15 +249,15 @@ where
         }
     }
     assert_eq!(pv.unique_values(), 52);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     pv.optimize();
     assert_eq!(pv.unique_values(), 52);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
         if (i % 77) % 3 == 0 {
-            assert_eq!(pv.get(i as u64), Some(0));
+            assert_eq!(pv.get(i), Some(0));
         } else {
-            assert_eq!(pv.get(i as u64), Some(i % 77));
+            assert_eq!(pv.get(i), Some(i as u32 % 77));
         }
     }
     for i in 0..iteration_count {
@@ -266,27 +266,27 @@ where
         }
     }
     assert_eq!(pv.unique_values(), 26);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     pv.optimize();
     assert_eq!(pv.unique_values(), 26);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
         if ((i % 77) % 3) == 0 || ((i % 77) % 2) == 0 {
-            assert_eq!(pv.get(i as u64), Some(0));
+            assert_eq!(pv.get(i), Some(0));
         } else {
-            assert_eq!(pv.get(i as u64), Some(i % 77));
+            assert_eq!(pv.get(i), Some(i as u32 % 77));
         }
     }
     for _ in 0..10 {
         pv.optimize();
     }
     assert_eq!(pv.unique_values(), 26);
-    assert_eq!(pv.len(), iteration_count as u64);
+    assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
         if ((i % 77) % 3) == 0 || ((i % 77) % 2) == 0 {
-            assert_eq!(pv.get(i as u64), Some(0));
+            assert_eq!(pv.get(i), Some(0));
         } else {
-            assert_eq!(pv.get(i as u64), Some(i % 77));
+            assert_eq!(pv.get(i), Some(i as u32 % 77));
         }
     }
 }

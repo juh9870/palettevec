@@ -24,7 +24,7 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         }
     }
 
-    pub fn filled(value: T, len: u32) -> Self {
+    pub fn filled(value: T, len: usize) -> Self {
         let mut palette = P::new();
         let (index, index_size) = palette.insert_new(PaletteEntry { value, count: len });
         debug_assert_eq!(index, 0);
@@ -32,7 +32,7 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         if let Some(index_size) = index_size {
             buffer.set_index_size(index_size, None);
         }
-        buffer.zeroed(len as usize);
+        buffer.zeroed(len);
 
         Self {
             palette,
@@ -41,7 +41,7 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         }
     }
 
-    pub fn len(&self) -> u64 {
+    pub fn len(&self) -> usize {
         self.buffer.len()
     }
 
@@ -102,7 +102,7 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
     }
 
     pub fn set(&mut self, offset: usize, value: &T) {
-        if offset as u64 >= self.buffer.len() {
+        if offset >= self.buffer.len() {
             return;
         }
         let old_index_size = self.palette.index_size();
@@ -142,11 +142,11 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         }
     }
 
-    pub fn get(&self, offset: u64) -> Option<T> {
+    pub fn get(&self, offset: usize) -> Option<T> {
         if offset >= self.buffer.len() {
             return None;
         }
-        let index = self.buffer.get_index(offset as usize);
+        let index = self.buffer.get_index(offset);
         Some(self.palette.get_by_index(index).unwrap().value.clone())
     }
 
@@ -160,6 +160,6 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
     pub fn optimize(&mut self) {
         let mapping = self.palette.optimize();
         let new_index_size = self.palette.index_size();
-        self.buffer.set_index_size(new_index_size as usize, mapping);
+        self.buffer.set_index_size(new_index_size, mapping);
     }
 }

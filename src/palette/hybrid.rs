@@ -5,8 +5,8 @@ use crate::palette::{calculate_smallest_index_size, compare_palette_entries_max_
 use super::{compare_palette_entries_option_max_first, Palette, PaletteEntry};
 
 pub struct HybridPalette<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> {
-    index_size: u32,
-    real_entries: u32,
+    index_size: usize,
+    real_entries: usize,
     storage: HybridStorage<INLINE_PALETTE_THRESHOLD, T>,
 }
 
@@ -15,9 +15,9 @@ enum HybridStorage<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> 
         array: [Option<PaletteEntry<T>>; INLINE_PALETTE_THRESHOLD],
     },
     HashMap {
-        free_indices: Vec<u64>,
-        index_map: HashMap<u64, PaletteEntry<T>>,
-        value_map: HashMap<T, u64>,
+        free_indices: Vec<usize>,
+        index_map: HashMap<usize, PaletteEntry<T>>,
+        value_map: HashMap<T, usize>,
     },
 }
 
@@ -34,10 +34,10 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
                 for (i, entry) in array.iter().enumerate() {
                     if let Some(entry) = entry {
                         debug_assert!(entry.count > 0);
-                        value_map.insert(entry.value.clone(), i as u64);
-                        index_map.insert(i as u64, entry.clone());
+                        value_map.insert(entry.value.clone(), i);
+                        index_map.insert(i, entry.clone());
                     } else {
-                        free_indices.push(i as u64);
+                        free_indices.push(i);
                     }
                 }
                 debug_assert_eq!(index_map.len(), value_map.len());
@@ -53,7 +53,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
     }
 
     /// Returns mapping of old_indices to new_indices if necessary
-    fn switch_to_array(&mut self) -> Option<HashMap<u64, u64>> {
+    fn switch_to_array(&mut self) -> Option<HashMap<usize, usize>> {
         match &mut self.storage {
             HybridStorage::Array { .. } => unreachable!(),
             HybridStorage::HashMap {
@@ -70,10 +70,10 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
                 let mut needs_new_mapping = false;
                 for (new_index, (old_index, entry)) in index_map.iter().enumerate() {
                     debug_assert!(entry.count > 0);
-                    if new_index as u64 != *old_index {
+                    if new_index != *old_index {
                         needs_new_mapping = true;
                     }
-                    new_mapping.insert(*old_index, new_index as u64);
+                    new_mapping.insert(*old_index, new_index);
                     array[new_index] = Some(entry.clone());
                 }
                 if !needs_new_mapping {
@@ -109,18 +109,18 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
     }
 
     fn len(&self) -> usize {
-        self.real_entries as usize
+        self.real_entries
     }
 
-    fn index_size(&self) -> u32 {
+    fn index_size(&self) -> usize {
         self.index_size
     }
 
-    fn mark_as_unused(&mut self, index: u64) {
+    fn mark_as_unused(&mut self, index: usize) {
         self.real_entries -= 1;
         match &mut self.storage {
             HybridStorage::Array { array, .. } => {
-                array[index as usize] = None;
+                array[index] = None;
             }
             HybridStorage::HashMap {
                 free_indices,
@@ -135,13 +135,13 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         }
     }
 
-    fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, u64)> {
+    fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, usize)> {
         match &self.storage {
             HybridStorage::Array { array, .. } => {
                 for (index, entry) in array.iter().enumerate() {
                     if let Some(entry) = entry {
                         if &entry.value == value {
-                            return Some((entry, index as u64));
+                            return Some((entry, index));
                         }
                     }
                 }
@@ -160,13 +160,13 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         }
     }
 
-    fn get_mut_by_value(&mut self, value: &T) -> Option<(&mut PaletteEntry<T>, u64)> {
+    fn get_mut_by_value(&mut self, value: &T) -> Option<(&mut PaletteEntry<T>, usize)> {
         match &mut self.storage {
             HybridStorage::Array { array, .. } => {
                 for (index, entry) in array.iter_mut().enumerate() {
                     if let Some(entry) = entry {
                         if &entry.value == value {
-                            return Some((entry, index as u64));
+                            return Some((entry, index));
                         }
                     }
                 }
@@ -185,21 +185,21 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         }
     }
 
-    fn get_by_index(&self, index: u64) -> Option<&PaletteEntry<T>> {
+    fn get_by_index(&self, index: usize) -> Option<&PaletteEntry<T>> {
         match &self.storage {
-            HybridStorage::Array { array, .. } => array[index as usize].as_ref(),
+            HybridStorage::Array { array, .. } => array[index].as_ref(),
             HybridStorage::HashMap { index_map, .. } => index_map.get(&index),
         }
     }
 
-    fn get_mut_by_index(&mut self, index: u64) -> Option<&mut PaletteEntry<T>> {
+    fn get_mut_by_index(&mut self, index: usize) -> Option<&mut PaletteEntry<T>> {
         match &mut self.storage {
-            HybridStorage::Array { array, .. } => array[index as usize].as_mut(),
+            HybridStorage::Array { array, .. } => array[index].as_mut(),
             HybridStorage::HashMap { index_map, .. } => index_map.get_mut(&index),
         }
     }
 
-    fn insert_new(&mut self, entry: PaletteEntry<T>) -> (u64, Option<usize>) {
+    fn insert_new(&mut self, entry: PaletteEntry<T>) -> (usize, Option<usize>) {
         debug_assert!(entry.count > 0);
         match &mut self.storage {
             HybridStorage::Array { array, .. } => {
@@ -212,9 +212,9 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                         let mut actual_new_index_size = None;
                         if new_index_size > self.index_size {
                             self.index_size = new_index_size;
-                            actual_new_index_size = Some(new_index_size as usize);
+                            actual_new_index_size = Some(new_index_size);
                         }
-                        return (i as u64, actual_new_index_size);
+                        return (i, actual_new_index_size);
                     }
                 }
                 // No free spot available, need to swich to hashmap
@@ -235,7 +235,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 }
 
                 // No free index available, create a new one
-                let index = index_map.len() as u64;
+                let index = index_map.len();
                 value_map.insert(entry.value.clone(), index);
                 index_map.insert(index, entry);
                 self.real_entries += 1;
@@ -243,14 +243,14 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 let mut actual_new_index_size = None;
                 if new_index_size > self.index_size {
                     self.index_size = new_index_size;
-                    actual_new_index_size = Some(new_index_size as usize);
+                    actual_new_index_size = Some(new_index_size);
                 }
                 (index, actual_new_index_size)
             }
         }
     }
 
-    fn optimize(&mut self) -> Option<HashMap<u64, u64>> {
+    fn optimize(&mut self) -> Option<HashMap<usize, usize>> {
         self.index_size = calculate_smallest_index_size(self.real_entries);
         match &mut self.storage {
             HybridStorage::Array { array, .. } => {
@@ -281,7 +281,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                     if new_index != *old_index {
                         needs_new_mapping = true;
                     }
-                    new_mapping.insert(*old_index as u64, new_index as u64);
+                    new_mapping.insert(*old_index, new_index);
                 }
                 if needs_new_mapping {
                     return Some(new_mapping);
@@ -313,9 +313,9 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 entries.sort_unstable_by(|a, b| compare_palette_entries_max_first(&a.1, &b.1));
 
                 for (new_index, (old_index, entry)) in entries.into_iter().enumerate() {
-                    new_value_map.insert(entry.value.clone(), new_index as u64);
-                    new_index_map.insert(new_index as u64, entry);
-                    new_mapping.insert(old_index as u64, new_index as u64);
+                    new_value_map.insert(entry.value.clone(), new_index);
+                    new_index_map.insert(new_index, entry);
+                    new_mapping.insert(old_index, new_index);
                 }
                 free_indices.clear();
                 self.storage = HybridStorage::HashMap {
