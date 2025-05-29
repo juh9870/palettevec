@@ -14,10 +14,11 @@ impl AlignedIndexBuffer {
         &mut self,
         offset: usize,
         index_size: usize,
+        indices_per_u64: usize,
         index: usize,
     ) -> usize {
         debug_assert!(index_size > 0);
-        let indices_per_u64 = 64 / index_size;
+        debug_assert_eq!(64 / index_size, indices_per_u64);
         let target_u64 = &mut self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
         let mask = (1 << index_size) - 1;
@@ -110,14 +111,14 @@ impl IndexBuffer for AlignedIndexBuffer {
                     let old_index = self.get_index(i);
                     let new_index = mapping.get(&old_index).unwrap();
                     // We can just override the storage in place because we go backwards
-                    self.set_index_with_index_size(i, new_size, *new_index);
+                    self.set_index_with_index_size(i, new_size, new_indices_per_u64, *new_index);
                 }
             } else {
                 // No mapping provided, adjust indices without mapping
                 // We can work inplace by starting from the end and going backwards
                 for i in (0..self.len).rev() {
                     let old_index = self.get_index(i);
-                    self.set_index_with_index_size(i, new_size, old_index);
+                    self.set_index_with_index_size(i, new_size, new_indices_per_u64, old_index);
                 }
             }
             self.indices_per_u64 = new_indices_per_u64 as u8;
@@ -131,6 +132,7 @@ impl IndexBuffer for AlignedIndexBuffer {
                 self.storage.clear();
                 return;
             }
+            let new_indices_per_u64 = 64 / new_size;
             // Index size shrinked, keep storage size and adjust indices
             if let Some(mapping) = new_mapping {
                 // Mapping provided, adjust indices
@@ -138,14 +140,14 @@ impl IndexBuffer for AlignedIndexBuffer {
                     let old_index = self.get_index(i);
                     let new_index = mapping.get(&old_index).unwrap();
                     // We can just override the storage in place because the new size is smaller
-                    self.set_index_with_index_size(i, new_size, *new_index);
+                    self.set_index_with_index_size(i, new_size, new_indices_per_u64, *new_index);
                 }
             } else {
                 // No Mapping provided, just truncate indices
                 for i in 0..self.len {
                     let index = self.get_index(i);
                     // We can just override the storage in place because the new size is smaller
-                    self.set_index_with_index_size(i, new_size, index);
+                    self.set_index_with_index_size(i, new_size, new_indices_per_u64, index);
                 }
             }
             let new_indices_per_u64 = 64 / new_size;

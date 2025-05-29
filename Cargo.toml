@@ -25,6 +25,9 @@ rand_xoshiro = "0.7.0"
 serde = ["dep:serde"]
 bitcode = ["dep:bitcode"]
 
+[lib]
+bench = false
+
 [[bench]]
 name = "base_palette_vec"
 harness = false
