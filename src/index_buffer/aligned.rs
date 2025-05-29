@@ -9,14 +9,16 @@ pub struct AlignedIndexBuffer {
 }
 
 impl AlignedIndexBuffer {
-    fn set_index_with_index_size(&mut self, offset: usize, index_size: usize, index: u64) {
+    fn set_index_with_index_size(&mut self, offset: usize, index_size: usize, index: u64) -> u64 {
         debug_assert!(index_size > 0);
         let indices_per_u64 = 64 / index_size as usize;
         let target_u64 = &mut self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
         let mask = (1 << index_size) - 1;
+        let old_index = (*target_u64 >> target_offset) & mask;
         *target_u64 &= !(mask << target_offset);
         *target_u64 |= (index as u64) << target_offset;
+        old_index
     }
 
     fn get_index_with_index_size(&self, offset: usize, index_size: usize) -> u64 {
@@ -38,6 +40,27 @@ impl IndexBuffer for AlignedIndexBuffer {
             len: 0,
             storage: Vec::new(),
         }
+    }
+
+    fn zeroed(&mut self, len: usize) {
+        if self.index_size == 0 {
+            debug_assert!(self.storage.len() == 0);
+            self.len = len;
+            return;
+        }
+        let indices_per_u64 = 64 / self.index_size;
+        let needed_u64 = (len + indices_per_u64 - 1) / indices_per_u64; // ceil
+        self.storage.resize(needed_u64, 0);
+        self.storage.fill(0);
+        self.len = len;
+    }
+
+    fn len(&self) -> u64 {
+        self.len as u64
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len == 0
     }
 
     fn set_index_size(&mut self, new_size: usize, new_mapping: Option<HashMap<u64, u64>>) {
@@ -142,8 +165,12 @@ impl IndexBuffer for AlignedIndexBuffer {
         Some(index)
     }
 
-    fn set_index(&mut self, offset: usize, index: u64) {
-        self.set_index_with_index_size(offset, self.index_size, index);
+    fn set_index(&mut self, offset: usize, index: u64) -> u64 {
+        debug_assert!(
+            self.index_size > 0,
+            "Handle set on index_size == 0 one abstraction level above please :)"
+        );
+        self.set_index_with_index_size(offset, self.index_size, index)
     }
 
     fn get_index(&self, offset: usize) -> u64 {

@@ -99,3 +99,18 @@ fn index_buffer_index_size_0_operations() {
     let mut buffer = AlignedIndexBuffer::new();
     test_index_buffer_index_size_0_operations(&mut buffer);
 }
+
+#[test]
+fn index_buffer_len() {
+    let mut buffer = AlignedIndexBuffer::new();
+    test_index_buffer_len(&mut buffer, 3333);
+}
+
+#[test]
+fn index_buffer_zeroed() {
+    let mut buffer = AlignedIndexBuffer::new();
+    for i in 0..64 {
+        test_index_buffer_zeroed(&mut AlignedIndexBuffer::new(), i, 1337);
+        test_index_buffer_zeroed(&mut buffer, i, 1337);
+    }
+}
