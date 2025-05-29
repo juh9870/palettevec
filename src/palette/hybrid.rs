@@ -1,4 +1,6 @@
-use std::{collections::HashMap, hash::Hash};
+use std::hash::Hash;
+
+use rustc_hash::FxHashMap;
 
 use crate::palette::{calculate_smallest_index_size, compare_palette_entries_max_first};
 
@@ -16,8 +18,8 @@ enum HybridStorage<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> 
     },
     HashMap {
         free_indices: Vec<usize>,
-        index_map: HashMap<usize, PaletteEntry<T>>,
-        value_map: HashMap<T, usize>,
+        index_map: FxHashMap<usize, PaletteEntry<T>>,
+        value_map: FxHashMap<T, usize>,
     },
 }
 
@@ -29,8 +31,8 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
             HybridStorage::HashMap { .. } => unreachable!(),
             HybridStorage::Array { array } => {
                 let mut free_indices = Vec::new();
-                let mut index_map = HashMap::new();
-                let mut value_map = HashMap::new();
+                let mut index_map = FxHashMap::default();
+                let mut value_map = FxHashMap::default();
                 for (i, entry) in array.iter().enumerate() {
                     if let Some(entry) = entry {
                         debug_assert!(entry.count > 0);
@@ -53,7 +55,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
     }
 
     /// Returns mapping of old_indices to new_indices if necessary
-    fn switch_to_array(&mut self) -> Option<HashMap<usize, usize>> {
+    fn switch_to_array(&mut self) -> Option<FxHashMap<usize, usize>> {
         match &mut self.storage {
             HybridStorage::Array { .. } => unreachable!(),
             HybridStorage::HashMap {
@@ -63,7 +65,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
             } => {
                 debug_assert_eq!(index_map.len(), value_map.len());
                 debug_assert!(index_map.len() <= INLINE_PALETTE_THRESHOLD);
-                let mut new_mapping = HashMap::new();
+                let mut new_mapping = FxHashMap::default();
                 let mut array: [Option<PaletteEntry<T>>; INLINE_PALETTE_THRESHOLD] =
                     [const { None }; INLINE_PALETTE_THRESHOLD];
 
@@ -248,7 +250,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         }
     }
 
-    fn optimize(&mut self) -> Option<HashMap<usize, usize>> {
+    fn optimize(&mut self) -> Option<FxHashMap<usize, usize>> {
         self.index_size = calculate_smallest_index_size(self.real_entries);
         match &mut self.storage {
             HybridStorage::Array { array, .. } => {
@@ -256,7 +258,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 // entries by their size. Max count first.
 
                 // Save old mapping
-                let mut old_mapping = HashMap::new();
+                let mut old_mapping = FxHashMap::default();
                 for (i, entry) in array.iter().enumerate() {
                     if let Some(entry) = entry {
                         old_mapping.insert(entry.value.clone(), i);
@@ -268,7 +270,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
 
                 // Create new mapping
                 let mut needs_new_mapping = false;
-                let mut new_mapping = HashMap::new();
+                let mut new_mapping = FxHashMap::default();
                 for (new_index, entry) in array.iter().enumerate() {
                     let Some(entry) = entry else {
                         // Early break is allowed because we sort the array
@@ -303,9 +305,9 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 }
 
                 // We can't switch, so lets pack the indices closer together
-                let mut new_mapping = HashMap::new();
-                let mut new_index_map = HashMap::new();
-                let mut new_value_map = HashMap::new();
+                let mut new_mapping = FxHashMap::default();
+                let mut new_index_map = FxHashMap::default();
+                let mut new_value_map = FxHashMap::default();
 
                 let mut entries = index_map.drain().collect::<Vec<_>>();
                 entries.sort_by(|a, b| {

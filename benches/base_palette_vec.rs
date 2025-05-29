@@ -49,7 +49,8 @@ fn benchmark_for_threshold<const THRESHOLD: usize>(
     unique_values_options: &[u32],
 ) {
     let mut group = c.benchmark_group(format!("{}_T{}", group_name_prefix, THRESHOLD));
-    group.measurement_time(Duration::from_secs(5));
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(20);
     group.warm_up_time(Duration::from_millis(200));
 
     for &unique_vals in unique_values_options.iter() {
@@ -74,15 +75,14 @@ fn benchmark_for_threshold<const THRESHOLD: usize>(
 
 fn rng_routine_benchmarks(c: &mut Criterion) {
     let iterations_per_call = 4000;
-    let unique_values = [1, 4, 8, 16, 32, 256];
 
-    benchmark_for_threshold::<1>(c, "rng_routine", iterations_per_call, &unique_values);
-    benchmark_for_threshold::<4>(c, "rng_routine", iterations_per_call, &unique_values);
-    benchmark_for_threshold::<8>(c, "rng_routine", iterations_per_call, &unique_values);
-    benchmark_for_threshold::<16>(c, "rng_routine", iterations_per_call, &unique_values);
-    benchmark_for_threshold::<32>(c, "rng_routine", iterations_per_call, &unique_values);
-    benchmark_for_threshold::<64>(c, "rng_routine", iterations_per_call, &unique_values);
-    benchmark_for_threshold::<256>(c, "rng_routine", iterations_per_call, &unique_values);
+    benchmark_for_threshold::<1>(c, "rng_routine", iterations_per_call, &[1, 16]);
+    benchmark_for_threshold::<4>(c, "rng_routine", iterations_per_call, &[1, 2, 3, 4]);
+    benchmark_for_threshold::<8>(c, "rng_routine", iterations_per_call, &[8, 9]);
+    benchmark_for_threshold::<16>(c, "rng_routine", iterations_per_call, &[16, 17]);
+    benchmark_for_threshold::<32>(c, "rng_routine", iterations_per_call, &[24, 32, 33]);
+    benchmark_for_threshold::<64>(c, "rng_routine", iterations_per_call, &[40, 50, 64, 65]);
+    benchmark_for_threshold::<256>(c, "rng_routine", iterations_per_call, &[128, 256, 512]);
 }
 
 criterion_group!(benches, rng_routine_benchmarks);

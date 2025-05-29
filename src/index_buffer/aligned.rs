@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use super::IndexBuffer;
 
@@ -68,7 +68,7 @@ impl IndexBuffer for AlignedIndexBuffer {
         self.len == 0
     }
 
-    fn set_index_size(&mut self, new_size: usize, new_mapping: Option<HashMap<usize, usize>>) {
+    fn set_index_size(&mut self, new_size: usize, new_mapping: Option<FxHashMap<usize, usize>>) {
         if new_size > self.index_size {
             // Index size grew, grow storage if needed and adjust indices
             let new_indices_per_u64 = 64 / new_size;

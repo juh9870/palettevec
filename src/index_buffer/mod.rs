@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 pub mod aligned;
 
@@ -16,7 +16,7 @@ pub trait IndexBuffer {
     /// New mapping is <old_index, new_index>
     ///
     /// ALLOWED INDEX SIZES: [0, 63]
-    fn set_index_size(&mut self, new_size: usize, new_mapping: Option<HashMap<usize, usize>>);
+    fn set_index_size(&mut self, new_size: usize, new_mapping: Option<FxHashMap<usize, usize>>);
 
     /// index_offset in indices, not bits
     /// returns the old index

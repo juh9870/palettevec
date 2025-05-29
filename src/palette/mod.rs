@@ -1,4 +1,6 @@
-use std::{cmp::Ordering, collections::HashMap};
+use std::cmp::Ordering;
+
+use rustc_hash::FxHashMap;
 
 pub mod hybrid;
 
@@ -59,5 +61,5 @@ pub trait Palette<T: Eq + Clone> {
     fn insert_new(&mut self, entry: PaletteEntry<T>) -> (usize, Option<usize>);
     /// Optimizes the palette and returns the mapping of old_index -> new_index
     /// if necessary.
-    fn optimize(&mut self) -> Option<HashMap<usize, usize>>;
+    fn optimize(&mut self) -> Option<FxHashMap<usize, usize>>;
 }
