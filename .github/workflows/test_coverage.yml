@@ -23,10 +23,13 @@ jobs:
         # produce only the JSON summary
         run: cargo llvm-cov --json --summary-only --output-path coverage.json  
 
-      - name: Extract line coverage %
+      - name: Extract line coverage % (2 decimals)
         id: extract
         run: |
-          COVERAGE=$(jq '.data[0].totals.lines.percent' coverage.json)
+          # Read the raw percent (e.g. 87.345678)
+          RAW=$(jq '.data[0].totals.lines.percent' coverage.json)
+          # Format to two decimals (e.g. 87.34)
+          COVERAGE=$(printf "%.2f" "$RAW")
           echo "coverage=$COVERAGE" >> $GITHUB_ENV
 
       - name: Publish badge to Gist
@@ -38,7 +41,7 @@ jobs:
           gistID: ${{ secrets.COVERAGE_GIST_ID }}
           # file inside the Gist to update
           filename: palettevec_test_coverage.json
-          label: coverage
+          label: Test Coverage
           message: ${{ env.coverage }}%
           # gradient: red at ≤50%, green at ≥90%
           minColorRange: 50
