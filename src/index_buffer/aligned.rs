@@ -20,7 +20,8 @@ impl AlignedIndexBuffer {
     ) -> usize {
         debug_assert!(index_size > 0);
         debug_assert_eq!(64 / index_size, indices_per_u64);
-        let target_u64 = {
+        // THESE SHOULD WORK
+        /*let target_u64 = {
             #[cfg(feature = "unsafe_optimizations")]
             {
                 unsafe { self.storage.get_unchecked_mut(offset / indices_per_u64) }
@@ -29,7 +30,8 @@ impl AlignedIndexBuffer {
             {
                 &mut self.storage[offset / indices_per_u64]
             }
-        };
+        };*/
+        let target_u64 = &mut self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
         let mask = (1 << index_size) - 1;
         let old_index = (*target_u64 >> target_offset) & mask;
@@ -40,7 +42,8 @@ impl AlignedIndexBuffer {
 
     fn _set_index(&mut self, offset: usize, index: usize) -> usize {
         let indices_per_u64 = self.indices_per_u64 as usize;
-        let target_u64 = {
+        // THESE SHOULD WORK
+        /*let target_u64 = {
             #[cfg(feature = "unsafe_optimizations")]
             {
                 unsafe { self.storage.get_unchecked_mut(offset / indices_per_u64) }
@@ -49,7 +52,8 @@ impl AlignedIndexBuffer {
             {
                 &mut self.storage[offset / indices_per_u64]
             }
-        };
+        };*/
+        let target_u64 = &mut self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
         let old_index = (*target_u64 >> target_offset) & self.mask;
         *target_u64 &= !(self.mask << target_offset);
@@ -73,7 +77,8 @@ impl AlignedIndexBuffer {
             return 0;
         }
         let indices_per_u64 = self.indices_per_u64 as usize;
-        let target_u64 = {
+        // THESE SHOULD WORK
+        /*let target_u64 = {
             #[cfg(feature = "unsafe_optimizations")]
             {
                 unsafe { self.storage.get_unchecked(offset / indices_per_u64) }
@@ -82,7 +87,8 @@ impl AlignedIndexBuffer {
             {
                 &self.storage[offset / indices_per_u64]
             }
-        };
+        };*/
+        let target_u64 = &self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
         ((*target_u64 >> target_offset) & self.mask) as usize
     }
@@ -128,10 +134,31 @@ impl IndexBuffer for AlignedIndexBuffer {
             let new_indices_per_u64 = 64 / new_size;
             let needed_u64 = self.len.div_ceil(new_indices_per_u64);
             let have_u64 = self.storage.capacity();
-            if have_u64 < needed_u64 {
-                self.storage.reserve(needed_u64 - have_u64);
+            #[cfg(not(feature = "unsafe_optimizations"))]
+            {
+                if have_u64 < needed_u64 {
+                    self.storage.reserve(needed_u64 - have_u64);
+                }
+                self.storage.resize(needed_u64, 0);
             }
-            self.storage.resize(needed_u64, 0);
+
+            // WHY DOES THIS NOT WORK?
+            #[cfg(feature = "unsafe_optimizations")]
+            unsafe {
+                if have_u64 < needed_u64 {
+                    let mut new_storage = Vec::<u64>::with_capacity(needed_u64);
+                    let mut ptr = new_storage.as_mut_ptr();
+                    for word in &self.storage {
+                        std::ptr::write(ptr, *word);
+                        ptr = ptr.add(1);
+                    }
+                    std::ptr::write_bytes(ptr, 0, needed_u64 - self.storage.len());
+                    new_storage.set_len(needed_u64);
+                    self.storage = new_storage;
+                } else if needed_u64 < have_u64 {
+                    self.storage.truncate(needed_u64);
+                }
+            }
             if let Some(mapping) = new_mapping {
                 // Mapping provided, adjust indices
                 // We can work inplace by starting from the end and going backwards
