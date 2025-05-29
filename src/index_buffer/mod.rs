@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-pub(crate) mod aligned;
+pub mod aligned;
 
 pub trait IndexBuffer {
     fn new() -> Self;

@@ -15,12 +15,16 @@ rustc-hash = "2.1"
 bitcode = { version = "0.6", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 
-
 [dev-dependencies]
 rand = "0.9"
 rand_chacha = "0.9"
 criterion = { version = "0.5", features = ["html_reports"] }
+rand_xoshiro = "0.7.0"
 
 [features]
 serde = ["dep:serde"]
 bitcode = ["dep:bitcode"]
+
+[[bench]]
+name = "base_palette_vec"
+harness = false

@@ -41,6 +41,7 @@ pub trait Palette<T: Eq + Clone> {
     /// Returns amount of palette entries with count > 0.
     /// DO NOT use this to calculate index size. Use index_size() instead.
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool;
     /// Gets the current index size. This can change after insert_new() or optimize().
     fn index_size(&self) -> usize;
 

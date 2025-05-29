@@ -3,8 +3,8 @@ use std::{hash::Hash, marker::PhantomData};
 use index_buffer::IndexBuffer;
 use palette::{Palette, PaletteEntry};
 
-pub(crate) mod index_buffer;
-pub(crate) mod palette;
+pub mod index_buffer;
+pub mod palette;
 
 #[cfg(test)]
 pub(crate) mod tests;

@@ -17,6 +17,7 @@ fn test_palette_insert_new<P: Palette<u32>>(mut palette: P, amount_unique_insert
 }
 
 fn test_palette_len<P: Palette<u32>>(mut palette: P, amount_unique_inserts: usize) {
+    assert!(palette.is_empty());
     for value in 0..amount_unique_inserts {
         palette.insert_new(PaletteEntry {
             value: value as u32,

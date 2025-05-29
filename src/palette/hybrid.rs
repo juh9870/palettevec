@@ -110,6 +110,10 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         self.real_entries
     }
 
+    fn is_empty(&self) -> bool {
+        self.real_entries == 0
+    }
+
     fn index_size(&self) -> usize {
         self.index_size
     }
