@@ -20,7 +20,16 @@ impl AlignedIndexBuffer {
     ) -> usize {
         debug_assert!(index_size > 0);
         debug_assert_eq!(64 / index_size, indices_per_u64);
-        let target_u64 = &mut self.storage[offset / indices_per_u64];
+        let target_u64 = {
+            #[cfg(feature = "unsafe_optimizations")]
+            {
+                unsafe { self.storage.get_unchecked_mut(offset / indices_per_u64) }
+            }
+            #[cfg(not(feature = "unsafe_optimizations"))]
+            {
+                &mut self.storage[offset / indices_per_u64]
+            }
+        };
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
         let mask = (1 << index_size) - 1;
         let old_index = (*target_u64 >> target_offset) & mask;
@@ -31,7 +40,16 @@ impl AlignedIndexBuffer {
 
     fn _set_index(&mut self, offset: usize, index: usize) -> usize {
         let indices_per_u64 = self.indices_per_u64 as usize;
-        let target_u64 = &mut self.storage[offset / indices_per_u64];
+        let target_u64 = {
+            #[cfg(feature = "unsafe_optimizations")]
+            {
+                unsafe { self.storage.get_unchecked_mut(offset / indices_per_u64) }
+            }
+            #[cfg(not(feature = "unsafe_optimizations"))]
+            {
+                &mut self.storage[offset / indices_per_u64]
+            }
+        };
         let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
         let old_index = (*target_u64 >> target_offset) & self.mask;
         *target_u64 &= !(self.mask << target_offset);
@@ -55,7 +73,16 @@ impl AlignedIndexBuffer {
             return 0;
         }
         let indices_per_u64 = self.indices_per_u64 as usize;
-        let target_u64 = &self.storage[offset / indices_per_u64];
+        let target_u64 = {
+            #[cfg(feature = "unsafe_optimizations")]
+            {
+                unsafe { self.storage.get_unchecked(offset / indices_per_u64) }
+            }
+            #[cfg(not(feature = "unsafe_optimizations"))]
+            {
+                &self.storage[offset / indices_per_u64]
+            }
+        };
         let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
         ((*target_u64 >> target_offset) & self.mask) as usize
     }
