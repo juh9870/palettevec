@@ -1,5 +1,3 @@
-use std::u64;
-
 use crate::index_buffer::IndexBuffer;
 
 mod aligned;

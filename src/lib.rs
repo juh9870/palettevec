@@ -75,10 +75,7 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
     pub fn push(&mut self, value: T) {
         let Some((entry, index)) = self.palette.get_mut_by_value(&value) else {
             // Value is new, insert it into the palette
-            let (index, new_index_size) = self.palette.insert_new(PaletteEntry {
-                value: value,
-                count: 1,
-            });
+            let (index, new_index_size) = self.palette.insert_new(PaletteEntry { value, count: 1 });
             if let Some(new_index_size) = new_index_size {
                 self.buffer.set_index_size(new_index_size, None);
             }
@@ -161,5 +158,11 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         let mapping = self.palette.optimize();
         let new_index_size = self.palette.index_size();
         self.buffer.set_index_size(new_index_size, mapping);
+    }
+}
+
+impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> Default for PaletteVec<T, P, B> {
+    fn default() -> Self {
+        Self::new()
     }
 }

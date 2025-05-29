@@ -49,12 +49,12 @@ impl IndexBuffer for AlignedIndexBuffer {
 
     fn zeroed(&mut self, len: usize) {
         if self.index_size == 0 {
-            debug_assert!(self.storage.len() == 0);
+            debug_assert!(self.storage.is_empty());
             self.len = len;
             return;
         }
         let indices_per_u64 = 64 / self.index_size;
-        let needed_u64 = (len + indices_per_u64 - 1) / indices_per_u64; // ceil
+        let needed_u64 = len.div_ceil(indices_per_u64);
         self.storage.resize(needed_u64, 0);
         self.storage.fill(0);
         self.len = len;
@@ -72,7 +72,7 @@ impl IndexBuffer for AlignedIndexBuffer {
         if new_size > self.index_size {
             // Index size grew, grow storage if needed and adjust indices
             let new_indices_per_u64 = 64 / new_size;
-            let needed_u64 = (self.len + new_indices_per_u64 - 1) / new_indices_per_u64; // ceil
+            let needed_u64 = self.len.div_ceil(new_indices_per_u64);
             let have_u64 = self.storage.capacity();
             if have_u64 < needed_u64 {
                 self.storage.reserve(needed_u64 - have_u64);

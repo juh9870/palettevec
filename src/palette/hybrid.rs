@@ -145,17 +145,15 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                         }
                     }
                 }
-                return None;
+                None
             }
             HybridStorage::HashMap {
                 index_map,
                 value_map,
                 ..
             } => {
-                let Some(index) = value_map.get(value) else {
-                    return None;
-                };
-                return index_map.get(index).map(|entry| (entry, *index));
+                let index = value_map.get(value)?;
+                index_map.get(index).map(|entry| (entry, *index))
             }
         }
     }
@@ -170,17 +168,15 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                         }
                     }
                 }
-                return None;
+                None
             }
             HybridStorage::HashMap {
                 index_map,
                 value_map,
                 ..
             } => {
-                let Some(index) = value_map.get(value) else {
-                    return None;
-                };
-                return index_map.get_mut(index).map(|entry| (entry, *index));
+                let index = value_map.get(value)?;
+                index_map.get_mut(index).map(|entry| (entry, *index))
             }
         }
     }
@@ -323,7 +319,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                     index_map: new_index_map,
                     value_map: new_value_map,
                 };
-                return Some(new_mapping);
+                Some(new_mapping)
             }
         }
     }
