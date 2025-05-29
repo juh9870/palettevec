@@ -26,8 +26,7 @@ jobs:
       - name: Extract line coverage %
         id: extract
         run: |
-          COVERAGE=$(jq '.totals.line_percent' coverage.json)
-          # make available to subsequent steps
+          COVERAGE=$(jq '.data[0].totals.lines.percent' coverage.json)
           echo "coverage=$COVERAGE" >> $GITHUB_ENV
 
       - name: Publish badge to Gist
