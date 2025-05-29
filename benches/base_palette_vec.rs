@@ -256,7 +256,12 @@ fn set_routine_benchmarks(c: &mut Criterion) {
     );
 }
 
-criterion_group!(benches, rng_routine_benchmarks);
+criterion_group!(
+    benches,
+    rng_routine_benchmarks,
+    get_routine_benchmarks,
+    set_routine_benchmarks
+);
 //criterion_group!(benches, get_routine_benchmarks);
 //criterion_group!(benches, set_routine_benchmarks);
 criterion_main!(benches);

@@ -5,6 +5,7 @@ use super::IndexBuffer;
 pub struct AlignedIndexBuffer {
     index_size: usize,
     indices_per_u64: u8,
+    mask: u64,
     len: usize,
     storage: Vec<u64>,
 }
@@ -32,9 +33,8 @@ impl AlignedIndexBuffer {
         let indices_per_u64 = self.indices_per_u64 as usize;
         let target_u64 = &mut self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
-        let mask = (1 << self.index_size) - 1;
-        let old_index = (*target_u64 >> target_offset) & mask;
-        *target_u64 &= !(mask << target_offset);
+        let old_index = (*target_u64 >> target_offset) & self.mask;
+        *target_u64 &= !(self.mask << target_offset);
         *target_u64 |= (index as u64) << target_offset;
         old_index as usize
     }
@@ -57,8 +57,7 @@ impl AlignedIndexBuffer {
         let indices_per_u64 = self.indices_per_u64 as usize;
         let target_u64 = &self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
-        let mask = (1 << self.index_size) - 1;
-        ((*target_u64 >> target_offset) & mask) as usize
+        ((*target_u64 >> target_offset) & self.mask) as usize
     }
 }
 
@@ -68,6 +67,7 @@ impl IndexBuffer for AlignedIndexBuffer {
             index_size: 0,
             indices_per_u64: 0,
             len: 0,
+            mask: 0,
             storage: Vec::new(),
         }
     }
@@ -81,6 +81,7 @@ impl IndexBuffer for AlignedIndexBuffer {
         let indices_per_u64 = 64 / self.index_size;
         self.indices_per_u64 = indices_per_u64 as u8;
         let needed_u64 = len.div_ceil(indices_per_u64);
+        self.mask = (1 << self.index_size) - 1;
         self.storage.resize(needed_u64, 0);
         self.storage.fill(0);
         self.len = len;
@@ -122,6 +123,7 @@ impl IndexBuffer for AlignedIndexBuffer {
                 }
             }
             self.indices_per_u64 = new_indices_per_u64 as u8;
+            self.mask = (1 << new_size) - 1;
         } else if new_size < self.index_size {
             if new_size == 0 {
                 if let Some(new_mapping) = new_mapping {
@@ -152,6 +154,7 @@ impl IndexBuffer for AlignedIndexBuffer {
             }
             let new_indices_per_u64 = 64 / new_size;
             self.indices_per_u64 = new_indices_per_u64 as u8;
+            self.mask = (1 << new_size) - 1;
             let needed_u64 = self.len.div_ceil(new_indices_per_u64);
             self.storage.truncate(needed_u64);
         } else if let Some(mapping) = new_mapping {
