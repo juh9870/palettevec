@@ -176,6 +176,7 @@ fn get_routine_benchmarks(c: &mut Criterion) {
 // ------------------------------ SET OPERATION BENCHMARK --------------------------------------
 
 // Helper function to define benchmarks for PaletteVec::set() for different THRESHOLDs
+#[allow(dead_code)]
 fn benchmark_set_for_threshold<const THRESHOLD: usize>(
     c: &mut Criterion,
     vec_len_for_setup: u32,
@@ -220,6 +221,7 @@ fn benchmark_set_for_threshold<const THRESHOLD: usize>(
     group.finish();
 }
 
+#[allow(dead_code)]
 fn set_routine_benchmarks(c: &mut Criterion) {
     const VEC_LEN_FOR_SETUP: u32 = 4000;
     const SET_ITERATIONS_PER_CALL: u32 = 4000;
@@ -254,7 +256,7 @@ fn set_routine_benchmarks(c: &mut Criterion) {
     );
 }
 
-//criterion_group!(benches, rng_routine_benchmarks);
+criterion_group!(benches, rng_routine_benchmarks);
 //criterion_group!(benches, get_routine_benchmarks);
-criterion_group!(benches, set_routine_benchmarks);
+//criterion_group!(benches, set_routine_benchmarks);
 criterion_main!(benches);

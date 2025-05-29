@@ -4,6 +4,7 @@ use super::IndexBuffer;
 
 pub struct AlignedIndexBuffer {
     index_size: usize,
+    indices_per_u64: u8,
     len: usize,
     storage: Vec<u64>,
 }
@@ -26,7 +27,18 @@ impl AlignedIndexBuffer {
         old_index as usize
     }
 
-    fn get_index_with_index_size(&self, offset: usize, index_size: usize) -> usize {
+    fn _set_index(&mut self, offset: usize, index: usize) -> usize {
+        let indices_per_u64 = self.indices_per_u64 as usize;
+        let target_u64 = &mut self.storage[offset / indices_per_u64];
+        let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
+        let mask = (1 << self.index_size) - 1;
+        let old_index = (*target_u64 >> target_offset) & mask;
+        *target_u64 &= !(mask << target_offset);
+        *target_u64 |= (index as u64) << target_offset;
+        old_index as usize
+    }
+
+    /*fn get_index_with_index_size(&self, offset: usize, index_size: usize) -> usize {
         if index_size == 0 {
             return 0;
         }
@@ -35,6 +47,17 @@ impl AlignedIndexBuffer {
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
         let mask = (1 << index_size) - 1;
         ((*target_u64 >> target_offset) & mask) as usize
+    }*/
+
+    fn _get_index(&self, offset: usize) -> usize {
+        if self.index_size == 0 {
+            return 0;
+        }
+        let indices_per_u64 = self.indices_per_u64 as usize;
+        let target_u64 = &self.storage[offset / indices_per_u64];
+        let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
+        let mask = (1 << self.index_size) - 1;
+        ((*target_u64 >> target_offset) & mask) as usize
     }
 }
 
@@ -42,6 +65,7 @@ impl IndexBuffer for AlignedIndexBuffer {
     fn new() -> Self {
         Self {
             index_size: 0,
+            indices_per_u64: 0,
             len: 0,
             storage: Vec::new(),
         }
@@ -54,6 +78,7 @@ impl IndexBuffer for AlignedIndexBuffer {
             return;
         }
         let indices_per_u64 = 64 / self.index_size;
+        self.indices_per_u64 = indices_per_u64 as u8;
         let needed_u64 = len.div_ceil(indices_per_u64);
         self.storage.resize(needed_u64, 0);
         self.storage.fill(0);
@@ -95,6 +120,7 @@ impl IndexBuffer for AlignedIndexBuffer {
                     self.set_index_with_index_size(i, new_size, old_index);
                 }
             }
+            self.indices_per_u64 = new_indices_per_u64 as u8;
         } else if new_size < self.index_size {
             if new_size == 0 {
                 if let Some(new_mapping) = new_mapping {
@@ -123,6 +149,7 @@ impl IndexBuffer for AlignedIndexBuffer {
                 }
             }
             let new_indices_per_u64 = 64 / new_size;
+            self.indices_per_u64 = new_indices_per_u64 as u8;
             let needed_u64 = self.len.div_ceil(new_indices_per_u64);
             self.storage.truncate(needed_u64);
         } else if let Some(mapping) = new_mapping {
@@ -141,7 +168,7 @@ impl IndexBuffer for AlignedIndexBuffer {
             self.len += 1;
             return;
         }
-        let indices_per_u64 = 64 / self.index_size;
+        let indices_per_u64 = self.indices_per_u64 as usize;
 
         // Check if we need a new storage u64
         if self.len % indices_per_u64 == 0 {
@@ -163,7 +190,7 @@ impl IndexBuffer for AlignedIndexBuffer {
             self.len -= 1;
             return Some(0);
         }
-        let indices_per_u64 = 64 / self.index_size;
+        let indices_per_u64 = self.indices_per_u64 as usize;
 
         let index = self.get_index(self.len - 1);
         self.len -= 1;
@@ -182,11 +209,11 @@ impl IndexBuffer for AlignedIndexBuffer {
             "Handle set on index_size == 0 one abstraction level above please :)"
         );
         debug_assert!(offset < self.len);
-        self.set_index_with_index_size(offset, self.index_size, index)
+        self._set_index(offset, index)
     }
 
     fn get_index(&self, offset: usize) -> usize {
         debug_assert!(offset < self.len);
-        self.get_index_with_index_size(offset, self.index_size)
+        self._get_index(offset)
     }
 }
