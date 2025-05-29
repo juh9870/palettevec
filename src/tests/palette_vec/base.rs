@@ -126,3 +126,22 @@ fn base_palette_vec_optimize() {
     test_palette_vec_optimize::<HybridPalette<333, u32>, AlignedIndexBuffer>(7333);
     test_palette_vec_optimize::<HybridPalette<16, u32>, AlignedIndexBuffer>(7333);
 }
+
+#[test]
+fn palette_vec_rng_operations() {
+    let mut rng = ChaCha8Rng::seed_from_u64(492384923941);
+    for _ in 0..calc_rng_iterations(32) {
+        let seed = rng.random();
+        test_palette_vec_rng_operations::<HybridPalette<0, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<1, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<2, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<3, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<4, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<7, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<17, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<49, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<199, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<33, u32>, AlignedIndexBuffer>(seed, 7333);
+        test_palette_vec_rng_operations::<HybridPalette<8, u32>, AlignedIndexBuffer>(seed, 7333);
+    }
+}

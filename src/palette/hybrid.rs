@@ -68,20 +68,18 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone>
                     [const { None }; INLINE_PALETTE_THRESHOLD];
 
                 let mut needs_new_mapping = false;
+                let mut index_map = index_map.iter().collect::<Vec<_>>();
+                index_map.sort_by(|a, b| {
+                    // .then_with to break ties for deterministic testing
+                    compare_palette_entries_max_first(a.1, b.1).then_with(|| a.0.cmp(b.0))
+                });
                 for (new_index, (old_index, entry)) in index_map.iter().enumerate() {
                     debug_assert!(entry.count > 0);
-                    if new_index != *old_index {
+                    if new_index != **old_index {
                         needs_new_mapping = true;
                     }
-                    new_mapping.insert(*old_index, new_index);
-                    array[new_index] = Some(entry.clone());
-                }
-                if !needs_new_mapping {
-                    let unsorted_array = array.clone();
-                    array.sort_by(compare_palette_entries_option_max_first);
-                    if array != unsorted_array {
-                        needs_new_mapping = true;
-                    }
+                    new_mapping.insert(**old_index, new_index);
+                    array[new_index] = Some((*entry).clone());
                 }
 
                 self.storage = HybridStorage::Array { array };
@@ -135,7 +133,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         }
     }
 
-    fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, usize)> {
+    /*fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, usize)> {
         match &self.storage {
             HybridStorage::Array { array, .. } => {
                 for (index, entry) in array.iter().enumerate() {
@@ -156,7 +154,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 index_map.get(index).map(|entry| (entry, *index))
             }
         }
-    }
+    }*/
 
     fn get_mut_by_value(&mut self, value: &T) -> Option<(&mut PaletteEntry<T>, usize)> {
         match &mut self.storage {
@@ -306,7 +304,10 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 let mut new_value_map = HashMap::new();
 
                 let mut entries = index_map.drain().collect::<Vec<_>>();
-                entries.sort_unstable_by(|a, b| compare_palette_entries_max_first(&a.1, &b.1));
+                entries.sort_by(|a, b| {
+                    // .then_with to break ties for deterministic testing
+                    compare_palette_entries_max_first(&a.1, &b.1).then_with(|| a.0.cmp(&b.0))
+                });
 
                 for (new_index, (old_index, entry)) in entries.into_iter().enumerate() {
                     new_value_map.insert(entry.value.clone(), new_index);

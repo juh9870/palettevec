@@ -99,9 +99,6 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
     }
 
     pub fn set(&mut self, offset: usize, value: &T) {
-        if offset >= self.buffer.len() {
-            return;
-        }
         let old_index_size = self.palette.index_size();
         // Check if the value is already in the palette
         if let Some((entry, index)) = self.palette.get_mut_by_value(value) {

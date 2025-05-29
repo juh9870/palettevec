@@ -97,7 +97,10 @@ impl IndexBuffer for AlignedIndexBuffer {
             }
         } else if new_size < self.index_size {
             if new_size == 0 {
-                debug_assert!(new_mapping.is_none());
+                if let Some(new_mapping) = new_mapping {
+                    debug_assert!(new_mapping.len() == 1);
+                    debug_assert!(new_mapping.values().find(|x| **x == 0).is_some());
+                }
                 self.index_size = 0;
                 self.storage.clear();
                 return;
@@ -119,6 +122,9 @@ impl IndexBuffer for AlignedIndexBuffer {
                     self.set_index_with_index_size(i, new_size, index);
                 }
             }
+            let new_indices_per_u64 = 64 / new_size;
+            let needed_u64 = self.len.div_ceil(new_indices_per_u64);
+            self.storage.truncate(needed_u64);
         } else if let Some(mapping) = new_mapping {
             // Index size stayed the same, apply new mapping if provided
             for i in 0..self.len {
@@ -175,10 +181,12 @@ impl IndexBuffer for AlignedIndexBuffer {
             self.index_size > 0,
             "Handle set on index_size == 0 one abstraction level above please :)"
         );
+        debug_assert!(offset < self.len);
         self.set_index_with_index_size(offset, self.index_size, index)
     }
 
     fn get_index(&self, offset: usize) -> usize {
+        debug_assert!(offset < self.len);
         self.get_index_with_index_size(offset, self.index_size)
     }
 }

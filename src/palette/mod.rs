@@ -44,7 +44,7 @@ pub trait Palette<T: Eq + Clone> {
     /// Gets the current index size. This can change after insert_new() or optimize().
     fn index_size(&self) -> usize;
 
-    fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, usize)>;
+    //fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, usize)>;
     fn get_mut_by_value(&mut self, value: &T) -> Option<(&mut PaletteEntry<T>, usize)>;
     fn get_by_index(&self, index: usize) -> Option<&PaletteEntry<T>>;
     fn get_mut_by_index(&mut self, index: usize) -> Option<&mut PaletteEntry<T>>;

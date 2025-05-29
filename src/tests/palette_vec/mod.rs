@@ -1,4 +1,9 @@
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
+
 use crate::{index_buffer::IndexBuffer, palette::Palette, PaletteVec};
+
+use super::calc_rng_iterations;
 
 mod base;
 
@@ -288,5 +293,50 @@ where
         } else {
             assert_eq!(pv.get(i), Some(i as u32 % 77));
         }
+    }
+}
+
+fn test_palette_vec_rng_operations<P, B>(seed: u64, iteration_count: usize)
+where
+    P: Palette<u32>,
+    B: IndexBuffer,
+{
+    let iteration_count = calc_rng_iterations(iteration_count);
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    let mut pv: PaletteVec<u32, P, B> = PaletteVec::filled(89, 3);
+    let mut control = vec![89; 3];
+    let max_elem = 333;
+
+    for _ in 0..iteration_count {
+        if rng.random_bool(0.01) {
+            pv.optimize();
+        }
+        if rng.random_bool(0.2) {
+            let n = rng.random_range(0..max_elem);
+            pv.push(n);
+            control.push(n);
+        }
+        if rng.random_bool(0.2) {
+            let n = rng.random_range(0..max_elem);
+            pv.push_ref(&n);
+            control.push(n);
+        }
+        if rng.random_bool(0.33) {
+            assert_eq!(pv.pop(), control.pop());
+        }
+        if rng.random_bool(0.5) && pv.len() > 0 {
+            let index = rng.random_range(0..pv.len());
+            let n = rng.random_range(0..max_elem);
+            pv.set(index, &n);
+            control[index] = n;
+        }
+        if rng.random_bool(0.5) && pv.len() > 0 {
+            let index = rng.random_range(0..pv.len());
+            assert_eq!(pv.get(index), control.get(index).copied());
+        }
+    }
+    while let Some(value) = pv.pop() {
+        assert!(value < max_elem);
+        assert_eq!(value, control.pop().unwrap());
     }
 }
