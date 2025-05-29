@@ -114,11 +114,11 @@ fn test_palette_optimize<P: Palette<u32>>(mut palette: P, amount_unique_inserts:
     for value in 0..amount_unique_inserts {
         palette.insert_new(PaletteEntry {
             value: value as u32,
-            count: value + 1,
+            count: value as u32 + 1,
         });
         control.push(PaletteEntry {
             value: value as u32,
-            count: value + 1,
+            count: value as u32 + 1,
         });
     }
 
@@ -155,7 +155,7 @@ fn test_palette_index_size_after_optimizing<P: Palette<u32>>(
     for value in 0..amount_unique_inserts {
         palette.insert_new(PaletteEntry {
             value: value as u32,
-            count: value + 1,
+            count: value as u32 + 1,
         });
     }
     assert_eq!(

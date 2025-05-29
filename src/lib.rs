@@ -26,7 +26,10 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
 
     pub fn filled(value: T, len: usize) -> Self {
         let mut palette = P::new();
-        let (index, index_size) = palette.insert_new(PaletteEntry { value, count: len });
+        let (index, index_size) = palette.insert_new(PaletteEntry {
+            value,
+            count: len as u32,
+        });
         debug_assert_eq!(index, 0);
         let mut buffer = B::new();
         if let Some(index_size) = index_size {

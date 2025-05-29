@@ -7,7 +7,7 @@ pub mod hybrid;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PaletteEntry<T: Eq + Clone> {
     pub value: T,
-    pub count: usize,
+    pub count: u32,
 }
 
 /// Some with max count will be first, None will be last
