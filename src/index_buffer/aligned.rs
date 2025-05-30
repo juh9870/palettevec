@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use rustc_hash::FxHashMap;
 
 use crate::MemoryUsage;
