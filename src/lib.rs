@@ -1,4 +1,4 @@
-use std::{hash::Hash, marker::PhantomData};
+use std::{hash::Hash, marker::PhantomData, ops::Add};
 
 use index_buffer::IndexBuffer;
 use palette::{Palette, PaletteEntry};
@@ -8,6 +8,25 @@ pub mod palette;
 
 #[cfg(test)]
 pub(crate) mod tests;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MemoryUsage {
+    pub stack: usize,
+    pub heap_actually_needed: usize,
+    pub heap_allocated: usize,
+}
+
+impl Add for MemoryUsage {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            stack: self.stack + other.stack,
+            heap_actually_needed: self.heap_actually_needed + other.heap_actually_needed,
+            heap_allocated: self.heap_allocated + other.heap_allocated,
+        }
+    }
+}
 
 pub struct PaletteVec<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> {
     palette: P,
@@ -54,6 +73,14 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
 
     pub fn unique_values(&self) -> usize {
         self.palette.len()
+    }
+
+    /// Quickly estimates the memory used by the PaletteVec.
+    ///
+    /// IMPORTANT: Because of technical reasons, this is just an estimate,
+    /// not an exact value. Still, it is precise enough to work with.
+    pub fn memory_usage(&self) -> MemoryUsage {
+        self.palette.memory_usage() + self.buffer.memory_usage()
     }
 
     pub fn push_ref(&mut self, value: &T) {
