@@ -32,3 +32,7 @@ bench = false
 [[bench]]
 name = "base_palette_vec"
 harness = false
+
+[[bench]]
+name = "experiments"
+harness = false
