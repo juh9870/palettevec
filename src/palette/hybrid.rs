@@ -2,7 +2,10 @@ use std::hash::Hash;
 
 use rustc_hash::FxHashMap;
 
-use crate::palette::{calculate_smallest_index_size, compare_palette_entries_max_first};
+use crate::{
+    palette::{calculate_smallest_index_size, compare_palette_entries_max_first},
+    MemoryUsage,
+};
 
 use super::{compare_palette_entries_option_max_first, Palette, PaletteEntry};
 
@@ -114,6 +117,42 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
 
     fn is_empty(&self) -> bool {
         self.real_entries == 0
+    }
+
+    fn memory_usage(&self) -> MemoryUsage {
+        MemoryUsage {
+            stack: std::mem::size_of::<Self>(),
+            heap_actually_needed: match &self.storage {
+                HybridStorage::Array { .. } => 0,
+                HybridStorage::HashMap {
+                    free_indices,
+                    index_map,
+                    value_map,
+                } => {
+                    free_indices.len() * std::mem::size_of::<usize>()
+                        + index_map.len()
+                            * (std::mem::size_of::<usize>()
+                                + std::mem::size_of::<PaletteEntry<T>>())
+                        + value_map.len()
+                            * (std::mem::size_of::<T>() + std::mem::size_of::<usize>())
+                }
+            },
+            heap_allocated: match &self.storage {
+                HybridStorage::Array { .. } => 0,
+                HybridStorage::HashMap {
+                    free_indices,
+                    index_map,
+                    value_map,
+                } => {
+                    free_indices.capacity() * std::mem::size_of::<usize>()
+                        + index_map.capacity()
+                            * (std::mem::size_of::<usize>()
+                                + std::mem::size_of::<PaletteEntry<T>>())
+                        + value_map.capacity()
+                            * (std::mem::size_of::<T>() + std::mem::size_of::<usize>())
+                }
+            },
+        }
     }
 
     fn index_size(&self) -> usize {

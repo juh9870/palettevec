@@ -1,5 +1,7 @@
 use rustc_hash::FxHashMap;
 
+use crate::MemoryUsage;
+
 use super::IndexBuffer;
 
 pub struct AlignedIndexBuffer {
@@ -19,7 +21,7 @@ impl AlignedIndexBuffer {
         let indices_per_u64 = 64 / index_size;
         let target_u64 = &mut self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
-        let mask = (1 << index_size) - 1;
+        let mask = u64::MAX >> (64 - index_size);
         let old_index = (*target_u64 >> target_offset) & mask;
         *target_u64 &= !(mask << target_offset);
         *target_u64 |= (index as u64) << target_offset;
@@ -33,7 +35,7 @@ impl AlignedIndexBuffer {
         let indices_per_u64 = 64 / index_size;
         let target_u64 = &self.storage[offset / indices_per_u64];
         let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
-        let mask = (1 << index_size) - 1;
+        let mask = u64::MAX >> (64 - index_size);
         ((*target_u64 >> target_offset) & mask) as usize
     }
 }
@@ -68,15 +70,19 @@ impl IndexBuffer for AlignedIndexBuffer {
         self.len == 0
     }
 
+    fn memory_usage(&self) -> MemoryUsage {
+        MemoryUsage {
+            stack: std::mem::size_of::<Self>(),
+            heap_actually_needed: self.storage.len() * std::mem::size_of::<u64>(),
+            heap_allocated: self.storage.capacity() * std::mem::size_of::<u64>(),
+        }
+    }
+
     fn set_index_size(&mut self, new_size: usize, new_mapping: Option<FxHashMap<usize, usize>>) {
         if new_size > self.index_size {
             // Index size grew, grow storage if needed and adjust indices
             let new_indices_per_u64 = 64 / new_size;
             let needed_u64 = self.len.div_ceil(new_indices_per_u64);
-            let have_u64 = self.storage.capacity();
-            if have_u64 < needed_u64 {
-                self.storage.reserve(needed_u64 - have_u64);
-            }
             self.storage.resize(needed_u64, 0);
             if let Some(mapping) = new_mapping {
                 // Mapping provided, adjust indices

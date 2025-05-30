@@ -2,6 +2,8 @@ use std::cmp::Ordering;
 
 use rustc_hash::FxHashMap;
 
+use crate::MemoryUsage;
+
 pub mod hybrid;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,6 +46,7 @@ pub trait Palette<T: Eq + Clone> {
     /// DO NOT use this to calculate index size. Use index_size() instead.
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
+    fn memory_usage(&self) -> MemoryUsage;
     /// Gets the current index size. This can change after insert_new() or optimize().
     fn index_size(&self) -> usize;
 

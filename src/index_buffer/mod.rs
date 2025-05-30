@@ -1,5 +1,7 @@
 use rustc_hash::FxHashMap;
 
+use crate::MemoryUsage;
+
 pub mod aligned;
 
 pub trait IndexBuffer {
@@ -12,6 +14,7 @@ pub trait IndexBuffer {
     /// Returns the number of indices in the buffer.
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
+    fn memory_usage(&self) -> MemoryUsage;
     /// Call this every time the index buffer is resized.
     /// New mapping is <old_index, new_index>
     ///
