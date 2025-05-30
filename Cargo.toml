@@ -24,6 +24,10 @@ rand_xoshiro = "0.7.0"
 [features]
 serde = ["dep:serde"]
 bitcode = ["dep:bitcode"]
+unsafe_optimizations = []
+
+[lib]
+bench = false
 
 [[bench]]
 name = "base_palette_vec"

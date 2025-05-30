@@ -50,9 +50,9 @@ fn benchmark_for_threshold<const THRESHOLD: usize>(
     unique_values_options: &[u32],
 ) {
     let mut group = c.benchmark_group(format!("{}_T{}", group_name_prefix, THRESHOLD));
-    group.measurement_time(Duration::from_secs(2));
-    group.sample_size(20);
-    group.warm_up_time(Duration::from_millis(200));
+    group.measurement_time(Duration::from_secs(3));
+    group.sample_size(50);
+    group.warm_up_time(Duration::from_millis(500));
 
     for &unique_vals in unique_values_options.iter() {
         if unique_vals == 0 {
@@ -82,8 +82,8 @@ fn rng_routine_benchmarks(c: &mut Criterion) {
     benchmark_for_threshold::<4>(c, "rng_routine", iterations_per_call, &[1, 2, 3, 4, 5]);
     benchmark_for_threshold::<8>(c, "rng_routine", iterations_per_call, &[8, 9]);
     benchmark_for_threshold::<16>(c, "rng_routine", iterations_per_call, &[16, 17]);
-    benchmark_for_threshold::<32>(c, "rng_routine", iterations_per_call, &[24, 32, 33]);
-    benchmark_for_threshold::<64>(c, "rng_routine", iterations_per_call, &[40, 50, 64, 65]);
+    benchmark_for_threshold::<32>(c, "rng_routine", iterations_per_call, &[32, 33]);
+    benchmark_for_threshold::<64>(c, "rng_routine", iterations_per_call, &[64, 65]);
     benchmark_for_threshold::<256>(c, "rng_routine", iterations_per_call, &[128, 256, 512]);
 }
 
@@ -98,9 +98,9 @@ fn benchmark_get_for_threshold<const THRESHOLD: usize>(
     unique_values_options: &[u32],
 ) {
     let mut group = c.benchmark_group(format!("get_T{}", THRESHOLD));
-    group.measurement_time(Duration::from_secs(2));
-    group.sample_size(20);
-    group.warm_up_time(Duration::from_millis(200));
+    group.measurement_time(Duration::from_secs(3));
+    group.sample_size(50);
+    group.warm_up_time(Duration::from_millis(500));
 
     for &unique_vals in unique_values_options.iter() {
         if unique_vals == 0 {
@@ -150,32 +150,23 @@ fn get_routine_benchmarks(c: &mut Criterion) {
 
     // Test cases similar to rng_routine_benchmarks, focusing on unique values around THRESHOLD
     benchmark_get_for_threshold::<1>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[1, 2, 8]); // Test with more unique values than threshold
-    benchmark_get_for_threshold::<4>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[1, 4, 5]);
-    benchmark_get_for_threshold::<8>(
-        c,
-        VEC_LEN_FOR_SETUP,
-        GET_ITERATIONS_PER_CALL,
-        &[4, 8, 9, 16],
-    );
-    benchmark_get_for_threshold::<16>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[15, 16, 17]);
-    benchmark_get_for_threshold::<32>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[32, 33, 64]);
-    benchmark_get_for_threshold::<64>(
-        c,
-        VEC_LEN_FOR_SETUP,
-        GET_ITERATIONS_PER_CALL,
-        &[1, 8, 16, 63, 64, 65],
-    );
+    benchmark_get_for_threshold::<4>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[1, 2, 4, 5]);
+    benchmark_get_for_threshold::<8>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[8, 9]);
+    benchmark_get_for_threshold::<16>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[16, 17]);
+    benchmark_get_for_threshold::<32>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[32, 33]);
+    benchmark_get_for_threshold::<64>(c, VEC_LEN_FOR_SETUP, GET_ITERATIONS_PER_CALL, &[64, 65]);
     benchmark_get_for_threshold::<256>(
         c,
         VEC_LEN_FOR_SETUP,
         GET_ITERATIONS_PER_CALL,
-        &[1, 8, 16, 104, 146, 255, 256, 257, 512],
+        &[18, 16, 146, 255, 256, 512],
     );
 }
 
 // ------------------------------ SET OPERATION BENCHMARK --------------------------------------
 
 // Helper function to define benchmarks for PaletteVec::set() for different THRESHOLDs
+#[allow(dead_code)]
 fn benchmark_set_for_threshold<const THRESHOLD: usize>(
     c: &mut Criterion,
     vec_len_for_setup: u32,
@@ -183,9 +174,9 @@ fn benchmark_set_for_threshold<const THRESHOLD: usize>(
     unique_values_options: &[u32],
 ) {
     let mut group = c.benchmark_group(format!("set_T{}", THRESHOLD));
-    group.measurement_time(Duration::from_secs(2));
-    group.sample_size(30); // Increased sample size
-    group.warm_up_time(Duration::from_millis(200));
+    group.measurement_time(Duration::from_secs(3));
+    group.sample_size(50);
+    group.warm_up_time(Duration::from_millis(500));
 
     for &unique_vals in unique_values_options.iter() {
         if unique_vals == 0 {
@@ -220,41 +211,37 @@ fn benchmark_set_for_threshold<const THRESHOLD: usize>(
     group.finish();
 }
 
+#[allow(dead_code)]
 fn set_routine_benchmarks(c: &mut Criterion) {
     const VEC_LEN_FOR_SETUP: u32 = 4000;
     const SET_ITERATIONS_PER_CALL: u32 = 4000;
 
     // Test cases similar to rng_routine_benchmarks, focusing on unique values around THRESHOLD
-    benchmark_set_for_threshold::<1>(c, VEC_LEN_FOR_SETUP, SET_ITERATIONS_PER_CALL, &[1, 2, 8]); // Test with more unique values than threshold
-    benchmark_set_for_threshold::<4>(c, VEC_LEN_FOR_SETUP, SET_ITERATIONS_PER_CALL, &[1, 4, 5]);
-    benchmark_set_for_threshold::<8>(
-        c,
-        VEC_LEN_FOR_SETUP,
-        SET_ITERATIONS_PER_CALL,
-        &[4, 8, 9, 16],
-    );
+    benchmark_set_for_threshold::<1>(c, VEC_LEN_FOR_SETUP, SET_ITERATIONS_PER_CALL, &[1, 2]);
+    benchmark_set_for_threshold::<4>(c, VEC_LEN_FOR_SETUP, SET_ITERATIONS_PER_CALL, &[4, 5]);
+    benchmark_set_for_threshold::<8>(c, VEC_LEN_FOR_SETUP, SET_ITERATIONS_PER_CALL, &[8, 9]);
     benchmark_set_for_threshold::<16>(
         c,
         VEC_LEN_FOR_SETUP,
         SET_ITERATIONS_PER_CALL,
         &[4, 8, 12, 16, 17],
     );
-    benchmark_set_for_threshold::<32>(c, VEC_LEN_FOR_SETUP, SET_ITERATIONS_PER_CALL, &[32, 33, 64]);
-    benchmark_set_for_threshold::<64>(
-        c,
-        VEC_LEN_FOR_SETUP,
-        SET_ITERATIONS_PER_CALL,
-        &[1, 8, 16, 63, 64, 65],
-    );
+    benchmark_set_for_threshold::<32>(c, VEC_LEN_FOR_SETUP, SET_ITERATIONS_PER_CALL, &[32, 33]);
+    benchmark_set_for_threshold::<64>(c, VEC_LEN_FOR_SETUP, SET_ITERATIONS_PER_CALL, &[63, 64]);
     benchmark_set_for_threshold::<256>(
         c,
         VEC_LEN_FOR_SETUP,
         SET_ITERATIONS_PER_CALL,
-        &[1, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 255, 256, 257, 512],
+        &[1, 8, 16, 32, 64, 255, 256, 257, 512],
     );
 }
 
-//criterion_group!(benches, rng_routine_benchmarks);
+criterion_group!(
+    benches,
+    rng_routine_benchmarks,
+    get_routine_benchmarks,
+    set_routine_benchmarks
+);
 //criterion_group!(benches, get_routine_benchmarks);
-criterion_group!(benches, set_routine_benchmarks);
+//criterion_group!(benches, set_routine_benchmarks);
 criterion_main!(benches);
