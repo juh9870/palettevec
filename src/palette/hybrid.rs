@@ -9,6 +9,8 @@ use std::hash::Hash;
 
 use bitcode::{Decode, Encode};
 use rustc_hash::FxHashMap;
+use serde::{Deserialize, Serialize};
+use serde_big_array::BigArray;
 
 use crate::{
     palette::{calculate_smallest_index_size, compare_palette_entries_max_first},
@@ -30,9 +32,10 @@ pub struct HybridPalette<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + C
     storage: HybridStorage<INLINE_PALETTE_THRESHOLD, T>,
 }
 
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Encode, Decode, Serialize, Deserialize)]
 enum HybridStorage<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> {
     Array {
+        #[serde(with = "BigArray")]
         array: [Option<PaletteEntry<T>>; INLINE_PALETTE_THRESHOLD],
     },
     HashMap {

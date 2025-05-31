@@ -2,9 +2,7 @@
 //!
 //! AlignedIndexBuffer is a good default.
 
-use bitcode::Encode;
 use rustc_hash::FxHashMap;
-use serde::Serialize;
 
 use crate::MemoryUsage;
 
@@ -12,7 +10,7 @@ pub mod aligned;
 
 pub use self::aligned::AlignedIndexBuffer;
 
-pub trait IndexBuffer: Clone + Encode + Serialize {
+pub trait IndexBuffer {
     fn new() -> Self;
     /// Clears itself and fills itself with len 0-indices.
     ///

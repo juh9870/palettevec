@@ -14,6 +14,7 @@ repository = "https://github.com/alexdesander/palettevec"
 rustc-hash = "2.1"
 bitcode = { version = "0.6" }
 serde = { version = "1", features = ["derive"] }
+serde-big-array = "0.5"
 
 [dev-dependencies]
 rand = "0.9"
