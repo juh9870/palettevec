@@ -1,5 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use std::time::Duration;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::{hint::black_box, time::Duration};
 
 fn access_0(
     storage: &mut [u64],
