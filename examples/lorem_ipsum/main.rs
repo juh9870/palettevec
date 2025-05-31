@@ -7,7 +7,7 @@ use palettevec::{
 ///
 /// HybridPalettes threshold (right now 64) means a 64 * (stack size of T + 4) byte stack array will
 /// be created if needed. If the threshold is exceeded, a heap allocation will occur
-/// and the palette switches to usinf FxHashMap.
+/// and the palette switches to using FxHashMap.
 type CharPaletteVec = PaletteVec<char, HybridPalette<43, char>, AlignedIndexBuffer>;
 
 fn main() {
