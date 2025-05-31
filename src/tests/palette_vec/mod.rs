@@ -165,7 +165,7 @@ where
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
         pv.set(i as usize, &(value as u32));
-        assert_eq!(pv.get(i), Some(value as u32));
+        assert_eq!(pv.get(i), Some(&(value as u32)));
     }
     for i in (0..iteration_count).rev() {
         let value = i % amount_unique_values;
@@ -191,11 +191,11 @@ where
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
         pv.push(value as u32);
-        assert_eq!(pv.get(i), Some(value as u32));
+        assert_eq!(pv.get(i), Some(&(value as u32)));
     }
     for i in 0..iteration_count {
         let value = i % amount_unique_values;
-        assert_eq!(pv.get(i), Some(value as u32));
+        assert_eq!(pv.get(i), Some(&(value as u32)));
     }
 }
 
@@ -206,13 +206,13 @@ where
 {
     let mut pv: PaletteVec<u32, P, B> = PaletteVec::filled(7, iteration_count);
     for i in 0..iteration_count {
-        assert_eq!(pv.get(i), Some(7));
+        assert_eq!(pv.get(i), Some(&7));
     }
     assert_eq!(pv.get(iteration_count), None);
     for i in 0..iteration_count {
         let value = i % 11;
         pv.set(i as usize, &(value as u32));
-        assert_eq!(pv.get(i), Some(value as u32));
+        assert_eq!(pv.get(i), Some(&(value as u32)));
     }
 }
 
@@ -246,7 +246,7 @@ where
     assert_eq!(pv.unique_values(), 77);
     assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
-        assert_eq!(pv.get(i), Some(i as u32 % 77));
+        assert_eq!(pv.get(i), Some(&(i as u32 % 77)));
     }
     for i in 0..iteration_count {
         if (i % 77) % 3 == 0 {
@@ -260,9 +260,9 @@ where
     assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
         if (i % 77) % 3 == 0 {
-            assert_eq!(pv.get(i), Some(0));
+            assert_eq!(pv.get(i), Some(&0));
         } else {
-            assert_eq!(pv.get(i), Some(i as u32 % 77));
+            assert_eq!(pv.get(i), Some(&(i as u32 % 77)));
         }
     }
     for i in 0..iteration_count {
@@ -277,9 +277,9 @@ where
     assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
         if ((i % 77) % 3) == 0 || ((i % 77) % 2) == 0 {
-            assert_eq!(pv.get(i), Some(0));
+            assert_eq!(pv.get(i), Some(&0));
         } else {
-            assert_eq!(pv.get(i), Some(i as u32 % 77));
+            assert_eq!(pv.get(i), Some(&(i as u32 % 77)));
         }
     }
     for _ in 0..10 {
@@ -289,9 +289,9 @@ where
     assert_eq!(pv.len(), iteration_count);
     for i in 0..iteration_count {
         if ((i % 77) % 3) == 0 || ((i % 77) % 2) == 0 {
-            assert_eq!(pv.get(i), Some(0));
+            assert_eq!(pv.get(i), Some(&0));
         } else {
-            assert_eq!(pv.get(i), Some(i as u32 % 77));
+            assert_eq!(pv.get(i), Some(&(i as u32 % 77)));
         }
     }
 }
@@ -332,7 +332,7 @@ where
         }
         if rng.random_bool(0.5) && pv.len() > 0 {
             let index = rng.random_range(0..pv.len());
-            assert_eq!(pv.get(index), control.get(index).copied());
+            assert_eq!(pv.get(index), control.get(index));
         }
     }
     while let Some(value) = pv.pop() {

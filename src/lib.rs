@@ -166,12 +166,12 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         }
     }
 
-    pub fn get(&self, offset: usize) -> Option<T> {
+    pub fn get(&self, offset: usize) -> Option<&T> {
         if offset >= self.buffer.len() {
             return None;
         }
         let index = self.buffer.get_index(offset);
-        Some(self.palette.get_by_index(index).unwrap().value.clone())
+        Some(&self.palette.get_by_index(index).unwrap().value)
     }
 
     /// Optimizes the palette and indices vector. This is potentially very expensive
