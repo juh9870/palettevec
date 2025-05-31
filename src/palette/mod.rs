@@ -4,7 +4,9 @@
 
 use std::cmp::Ordering;
 
+use bitcode::{Decode, Encode};
 use rustc_hash::FxHashMap;
+use serde::{Deserialize, Serialize};
 
 use crate::MemoryUsage;
 
@@ -12,7 +14,7 @@ pub mod hybrid;
 
 pub use self::hybrid::HybridPalette;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, Serialize, Deserialize)]
 pub struct PaletteEntry<T: Eq + Clone> {
     pub value: T,
     pub count: u32,
@@ -46,7 +48,7 @@ pub(crate) fn calculate_smallest_index_size(n: usize) -> usize {
     (usize::BITS - (n - 1).leading_zeros()) as usize
 }
 
-pub trait Palette<T: Eq + Clone> {
+pub trait Palette<T: Eq + Clone>: Clone {
     fn new() -> Self;
     /// Returns amount of palette entries with count > 0.
     /// DO NOT use this to calculate index size. Use index_size() instead.

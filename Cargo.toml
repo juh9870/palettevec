@@ -12,8 +12,8 @@ repository = "https://github.com/alexdesander/palettevec"
 
 [dependencies]
 rustc-hash = "2.1"
-bitcode = { version = "0.6", optional = true }
-serde = { version = "1", features = ["derive"], optional = true }
+bitcode = { version = "0.6" }
+serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 rand = "0.9"
@@ -22,8 +22,6 @@ criterion = { version = "0.5", features = ["html_reports"] }
 rand_xoshiro = "0.7"
 
 [features]
-serde = ["dep:serde"]
-bitcode = ["dep:bitcode"]
 unsafe_optimizations = []
 
 [lib]

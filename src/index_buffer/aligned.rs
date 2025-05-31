@@ -4,7 +4,9 @@
 //! It does NOT store u64-boundary crossing indices. This means slightly more
 //! memory usage for slightly faster access times. This is a good default.
 
+use bitcode::{Decode, Encode};
 use rustc_hash::FxHashMap;
+use serde::{Deserialize, Serialize};
 
 use crate::MemoryUsage;
 
@@ -15,6 +17,7 @@ use super::IndexBuffer;
 ///
 /// It does NOT store u64-boundary crossing indices. This means slightly more
 /// memory usage for slightly faster access times. This is a good default.
+#[derive(Clone, Encode, Decode, Serialize, Deserialize)]
 pub struct AlignedIndexBuffer {
     index_size: usize,
     indices_per_u64: u8,

@@ -17,6 +17,7 @@
 //! - **`IndexBuffer` trait:** Defines the interface for how indices are stored.
 use std::{hash::Hash, marker::PhantomData, ops::Add};
 
+use bitcode::{Decode, Encode};
 use index_buffer::IndexBuffer;
 use palette::{Palette, PaletteEntry};
 
@@ -51,6 +52,7 @@ impl Add for MemoryUsage {
 /// `T`: The type of elements stored. Must implement `Eq`, `Hash`, and `Clone`. \
 /// `P`: The `Palette` implementation used to manage unique elements. \
 /// `B`: The `IndexBuffer` implementation used to store indices into the palette.
+#[derive(Clone, Encode, Decode)]
 pub struct PaletteVec<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> {
     palette: P,
     buffer: B,
