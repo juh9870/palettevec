@@ -1,6 +1,6 @@
 [package]
 name = "palettevec"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["alexdesander <alexdesander@tuta.io>"]
 description = "A palette compressed vector library for potentially insane runtime compression ratios."
@@ -19,7 +19,7 @@ serde = { version = "1", features = ["derive"], optional = true }
 rand = "0.9"
 rand_chacha = "0.9"
 criterion = { version = "0.5", features = ["html_reports"] }
-rand_xoshiro = "0.7.0"
+rand_xoshiro = "0.7"
 
 [features]
 serde = ["dep:serde"]

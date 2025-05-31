@@ -15,41 +15,6 @@
 //!   - `B`: The `IndexBuffer` implementation (e.g., `AlignedIndexBuffer`).
 //! - **`Palette<T>` trait:** Defines the interface for palette implementations.
 //! - **`IndexBuffer` trait:** Defines the interface for how indices are stored.
-//!
-//! ## Example
-//!
-//! ```rust
-//! use palettevec::{
-//!     index_buffer::aligned::AlignedIndexBuffer,
-//!     palette::hybrid::HybridPalette,
-//!     PaletteVec,
-//! };
-//!
-//! // Define a type alias for a common configuration
-//! type MyPaletteVec<T> = PaletteVec<T, HybridPalette<16, T>, AlignedIndexBuffer>;
-//!
-//! fn main() {
-//!     let mut vec: MyPaletteVec<&str, 10> = MyPaletteVec::new();
-//!
-//!     vec.push("apple");
-//!     vec.push("banana");
-//!     vec.push("apple");
-//!
-//!     assert_eq!(vec.get(0), Some(&"apple"));
-//!     assert_eq!(vec.get(1), Some(&"banana"));
-//!
-//!     vec.set(1, &"cherry");
-//!     assert_eq!(vec.get(1), Some(&"cherry"));
-//!
-//!     assert_eq!(vec.pop(), Some(&"apple"));
-//!
-//!     for item_ref in vec.iter() {
-//!         println!("- {}", item_ref);
-//!     }
-//!
-//!     vec.optimize();
-//! }
-//! ```
 use std::{hash::Hash, marker::PhantomData, ops::Add};
 
 use index_buffer::IndexBuffer;
