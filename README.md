@@ -1,57 +1,36 @@
-![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alexdesander/2bb1bb9e61798b07ce8eabb2f9c9dec3/raw/palettevec_test_coverage.json)
-
 # PaletteVec
 
-**PaletteVec is space efficient data structure for storing and managing items with a limited set of repeated elements, using a palette-based encoding scheme.**
+[![Test Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/alexdesander/2bb1bb9e61798b07ce8eabb2f9c9dec3/raw/palettevec_test_coverage.json)](https://gist.github.com/alexdesander/2bb1bb9e61798b07ce8eabb2f9c9dec3)
 
-### Palette compression has the following advantages:
-- Potentially insane compression ratios
-- Buffer can be manipulated without decompressing
-- Easy to use
+**PaletteVec is a Rust data structure designed for space-efficient storage of collections containing a limited number of unique, repeated elements. It achieves this by using a palette-based encoding scheme (palette compression), similar to how indexed color images or Minecraft chunk data are stored.**
 
-### Disadvantages:
-- Buffer accesses come with a runtime cost
-- Large palettes (large amount of distinct items) come with a
-  runtime cost of O(palette entries) per buffer access
+## Key Features
 
-### Use cases
-Palette compression has potential to save huge amounts of memory at runtime while still allowing for manipulation of the buffer elements. Most notably, palette compression is used in minecraft for block chunk storage. For most sophisticated voxel games, palette compression is a must.
+* **Space Efficiency:** Drastically reduces memory footprint for data with many repeated values by storing each unique value only once in a "palette" and then using compact indices to refer to them.
+* **Direct Manipulation:** Allows for operations like `push`, `pop`, `set`, and `get` directly on the compressed data without needing to decompress the entire collection.
+* **Iterator:** Supports iteration over its elements without decompression.
+* **Customizable Backend:** Generic over `Palette` and `IndexBuffer` traits, allowing for different storage strategies (e.g., `HybridPalette` for a balance of performance and memory, `AlignedIndexBuffer` for efficient index storage).
 
-Palette compression is also used in image compression (Indexed Color Images) and audio compression.
+## When to Use PaletteVec?
 
-## Example
-Creating and using a `PaletteVec`:
+`PaletteVec` is particularly useful in scenarios where:
 
-```rust
-use palettevec::PaletteVec;
+* You have a large collection of items.
+* The number of unique items in the collection is relatively small compared to the total number of items.
+* Memory efficiency is a critical concern.
+* You need to frequently access or modify elements within the collection.
 
-fn main() {
-    let mut vec = PaletteVec::new();
+**Common Use Cases:**
 
-    // Push elements
-    vec.push("apple");
-    vec.push("banana");
-    vec.push("apple");
+* **Voxel Engines:** Storing block data in game worlds (like Minecraft).
+* **Image Compression:** Representing indexed color images.
+* Any application dealing with large datasets of discrete, repeating values.
+* Whenever you want to store lots of repeated values that are expensive to clone.
 
-    // Access elements
-    assert_eq!(vec[0], "apple");
-    assert_eq!(vec[1], "banana");
+## Trade-offs
 
-    // Modify elements
-    vec.set(1, "cherry");
-    assert_eq!(vec[1], "cherry");
-
-    // Remove elements
-    assert_eq!(vec.pop(), Some(&"apple"));
-
-    // Iterate over elements
-    for item in &vec {
-        println!("{}", item);
-    }
-    // Optimizing the palette
-    vec.optimize();
-}
-```
+* **Access Overhead:** Accessing elements involves an indirection (looking up the index in the palette), which can introduce a small runtime cost compared to a standard `Vec<T>`.
+* **Palette Management:** For very large numbers of unique items (a large palette), the overhead of managing the palette itself might increase. The `HybridPalette` implementation helps mitigate this by switching from an array to a HashMap when the number of unique items exceeds a threshold.
 
 ## License
 
