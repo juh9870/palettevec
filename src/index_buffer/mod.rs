@@ -1,8 +1,14 @@
+//! Index buffers dictate how the actual indices are stored in memory and how they are accessed.
+//!
+//! AlignedIndexBuffer is a good default.
+
 use rustc_hash::FxHashMap;
 
 use crate::MemoryUsage;
 
 pub mod aligned;
+
+pub use self::aligned::AlignedIndexBuffer;
 
 pub trait IndexBuffer {
     fn new() -> Self;

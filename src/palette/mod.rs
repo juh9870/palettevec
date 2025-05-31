@@ -1,3 +1,7 @@
+//! The Palette dictates how the actual values you insert into a PaletteVec are stored and accessed.
+//!
+//! HybridPalette is a good default.
+
 use std::cmp::Ordering;
 
 use rustc_hash::FxHashMap;
@@ -5,6 +9,8 @@ use rustc_hash::FxHashMap;
 use crate::MemoryUsage;
 
 pub mod hybrid;
+
+pub use self::hybrid::HybridPalette;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PaletteEntry<T: Eq + Clone> {

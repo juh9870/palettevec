@@ -1,3 +1,10 @@
+//! A hybrid palette implementation (`HybridPalette`) for `PaletteVec`.
+//!
+//! It uses a stack-allocated array for a small number of unique items
+//! (up to `INLINE_PALETTE_THRESHOLD`) and switches to heap-allocated `FxHashMap`s
+//! if this threshold is exceeded. This provides a balance between performance
+//! for small palettes and scalability for larger ones.
+
 use std::hash::Hash;
 
 use rustc_hash::FxHashMap;
@@ -9,6 +16,12 @@ use crate::{
 
 use super::{compare_palette_entries_option_max_first, Palette, PaletteEntry};
 
+/// A hybrid palette implementation.
+///
+/// It uses a stack-allocated array for a small number of unique items
+/// (up to `INLINE_PALETTE_THRESHOLD`) and switches to heap-allocated `FxHashMap`s
+/// if this threshold is exceeded. This provides a balance between performance
+/// for small palettes and scalability for larger ones.
 pub struct HybridPalette<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> {
     index_size: usize,
     real_entries: usize,

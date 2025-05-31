@@ -1,9 +1,20 @@
+//! An `IndexBuffer` implementation that stores indices
+//! packed tightly into a `Vec<u64>`.
+//!
+//! It does NOT store u64-boundary crossing indices. This means slightly more
+//! memory usage for slightly faster access times. This is a good default.
+
 use rustc_hash::FxHashMap;
 
 use crate::MemoryUsage;
 
 use super::IndexBuffer;
 
+/// An `IndexBuffer` implementation that stores indices
+/// packed tightly into a `Vec<u64>`.
+///
+/// It does NOT store u64-boundary crossing indices. This means slightly more
+/// memory usage for slightly faster access times. This is a good default.
 pub struct AlignedIndexBuffer {
     index_size: usize,
     indices_per_u64: u8,
