@@ -1,3 +1,55 @@
+//! # PaletteVec
+//!
+//! `PaletteVec` is a space-efficient data structure for storing collections
+//! with a limited set of repeated elements. It uses a palette-based encoding
+//! scheme, similar to how indexed color images or Minecraft chunk data are stored.
+//!
+//! This approach can lead to significant memory savings when dealing with
+//! repetitive data, while still allowing for direct manipulation of the collection.
+//!
+//! ## Core Components
+//!
+//! - **`PaletteVec<T, P, B>`:** The main data structure.
+//!   - `T`: The type of elements stored. Must be `Eq + Hash + Clone`.
+//!   - `P`: The `Palette` implementation (e.g., `HybridPalette`).
+//!   - `B`: The `IndexBuffer` implementation (e.g., `AlignedIndexBuffer`).
+//! - **`Palette<T>` trait:** Defines the interface for palette implementations.
+//! - **`IndexBuffer` trait:** Defines the interface for how indices are stored.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use palettevec::{
+//!     index_buffer::aligned::AlignedIndexBuffer,
+//!     palette::hybrid::HybridPalette,
+//!     PaletteVec,
+//! };
+//!
+//! // Define a type alias for a common configuration
+//! type MyPaletteVec<T> = PaletteVec<T, HybridPalette<16, T>, AlignedIndexBuffer>;
+//!
+//! fn main() {
+//!     let mut vec: MyPaletteVec<&str, 10> = MyPaletteVec::new();
+//!
+//!     vec.push("apple");
+//!     vec.push("banana");
+//!     vec.push("apple");
+//!
+//!     assert_eq!(vec.get(0), Some(&"apple"));
+//!     assert_eq!(vec.get(1), Some(&"banana"));
+//!
+//!     vec.set(1, &"cherry");
+//!     assert_eq!(vec.get(1), Some(&"cherry"));
+//!
+//!     assert_eq!(vec.pop(), Some(&"apple"));
+//!
+//!     for item_ref in vec.iter() {
+//!         println!("- {}", item_ref);
+//!     }
+//!
+//!     vec.optimize();
+//! }
+//! ```
 use std::{hash::Hash, marker::PhantomData, ops::Add};
 
 use index_buffer::IndexBuffer;
@@ -28,6 +80,12 @@ impl Add for MemoryUsage {
     }
 }
 
+/// A vector-like data structure that uses a palette to store unique elements,
+/// significantly reducing memory for collections with many repeated values.
+///
+/// `T`: The type of elements stored. Must implement `Eq`, `Hash`, and `Clone`. \
+/// `P`: The `Palette` implementation used to manage unique elements. \
+/// `B`: The `IndexBuffer` implementation used to store indices into the palette.
 pub struct PaletteVec<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> {
     palette: P,
     buffer: B,
