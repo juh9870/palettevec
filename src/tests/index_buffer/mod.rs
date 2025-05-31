@@ -224,3 +224,25 @@ fn test_index_buffer_zeroed<B: IndexBuffer>(
     assert_eq!(buffer.pop_index(), None);
     assert_eq!(buffer.len(), 0);
 }
+
+fn test_index_buffer_iterator<B: IndexBuffer>(
+    buffer: &mut B,
+    index_size: usize,
+    iteration_count: usize,
+) {
+    assert!(buffer.is_empty());
+    buffer.set_index_size(index_size, None);
+    let possible_different_indices = if index_size > 0 {
+        2 << (index_size - 1)
+    } else {
+        1
+    };
+    for i in 0..iteration_count {
+        let value = i % possible_different_indices;
+        buffer.push_index(value);
+    }
+    for (i, index) in buffer.iter().enumerate() {
+        let value = i % possible_different_indices;
+        assert_eq!(index, value);
+    }
+}

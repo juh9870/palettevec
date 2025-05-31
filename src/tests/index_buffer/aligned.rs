@@ -114,3 +114,10 @@ fn index_buffer_zeroed() {
         test_index_buffer_zeroed(&mut buffer, i, 1337);
     }
 }
+
+#[test]
+fn index_buffer_iterator() {
+    for i in 0..64 {
+        test_index_buffer_iterator(&mut AlignedIndexBuffer::new(), i, 1337);
+    }
+}

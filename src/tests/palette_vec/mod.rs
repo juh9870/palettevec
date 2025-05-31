@@ -340,3 +340,24 @@ where
         assert_eq!(value, control.pop().unwrap());
     }
 }
+
+fn test_palette_vec_iter<P, B>(amount_unique_values: usize, iteration_count: usize)
+where
+    P: Palette<u32>,
+    B: IndexBuffer,
+{
+    let mut pv: PaletteVec<u32, P, B> = PaletteVec::new();
+    assert!(pv.is_empty());
+    for i in 0..iteration_count {
+        let value = i % amount_unique_values;
+        pv.push(value as u32);
+    }
+    for (i, value) in pv.iter().enumerate() {
+        assert_eq!(*value as usize, i % amount_unique_values);
+    }
+    let mut i = 0;
+    for value in &pv {
+        assert_eq!(*value as usize, i % amount_unique_values);
+        i += 1;
+    }
+}

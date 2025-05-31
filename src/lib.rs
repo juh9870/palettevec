@@ -186,10 +186,59 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         let new_index_size = self.palette.index_size();
         self.buffer.set_index_size(new_index_size, mapping);
     }
+
+    pub fn iter(&self) -> PaletteVecIter<T, P, B> {
+        self.into_iter()
+    }
 }
 
 impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> Default for PaletteVec<T, P, B> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// ITERATOR
+pub struct PaletteVecIter<'a, T, P, B>
+where
+    T: Eq + Hash + Clone,
+    P: Palette<T> + 'a,
+    B: IndexBuffer + 'a,
+{
+    palette: &'a P,
+    buffer_iter: B::Iter<'a>,
+    phantom: PhantomData<&'a T>,
+}
+
+impl<'a, T, P, B> Iterator for PaletteVecIter<'a, T, P, B>
+where
+    T: Eq + Hash + Clone,
+    P: Palette<T> + 'a,
+    B: IndexBuffer + 'a,
+{
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let idx = self.buffer_iter.next()?;
+        let entry = self.palette.get_by_index(idx).unwrap();
+        Some(&entry.value)
+    }
+}
+
+impl<'a, T, P, B> IntoIterator for &'a PaletteVec<T, P, B>
+where
+    T: Eq + Hash + Clone + 'a,
+    P: Palette<T> + 'a,
+    B: IndexBuffer + 'a,
+{
+    type Item = &'a T;
+    type IntoIter = PaletteVecIter<'a, T, P, B>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        PaletteVecIter {
+            palette: &self.palette,
+            buffer_iter: self.buffer.iter(),
+            phantom: PhantomData,
+        }
     }
 }

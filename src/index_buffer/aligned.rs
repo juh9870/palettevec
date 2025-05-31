@@ -254,4 +254,36 @@ impl IndexBuffer for AlignedIndexBuffer {
         debug_assert!(offset < self.len);
         self._get_index(offset)
     }
+
+    type Iter<'a>
+        = AlignedIndexIterator<'a>
+    where
+        Self: 'a;
+
+    fn iter(&self) -> Self::Iter<'_> {
+        AlignedIndexIterator {
+            buffer: self,
+            offset: 0,
+        }
+    }
+}
+
+// ITERATOR
+pub struct AlignedIndexIterator<'a> {
+    buffer: &'a AlignedIndexBuffer,
+    offset: usize,
+}
+
+impl<'a> Iterator for AlignedIndexIterator<'a> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset >= self.buffer.len {
+            None
+        } else {
+            let index = self.buffer.get_index(self.offset);
+            self.offset += 1;
+            Some(index)
+        }
+    }
 }

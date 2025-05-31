@@ -145,3 +145,22 @@ fn palette_vec_rng_operations() {
         test_palette_vec_rng_operations::<HybridPalette<8, u32>, AlignedIndexBuffer>(seed, 7333);
     }
 }
+
+#[test]
+fn palette_vec_iter() {
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(1, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(2, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(3, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(4, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(5, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(6, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(7, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(8, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(9, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(10, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(16, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(32, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(33, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(100, 1337);
+    test_palette_vec_iter::<HybridPalette<0, u32>, AlignedIndexBuffer>(1000, 1337);
+}

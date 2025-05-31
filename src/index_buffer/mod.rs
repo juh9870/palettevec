@@ -31,4 +31,11 @@ pub trait IndexBuffer {
 
     fn push_index(&mut self, index: usize);
     fn pop_index(&mut self) -> Option<usize>;
+
+    // INDEX ITERATOR
+    type Iter<'a>: Iterator<Item = usize>
+    where
+        Self: 'a;
+
+    fn iter(&self) -> Self::Iter<'_>;
 }
