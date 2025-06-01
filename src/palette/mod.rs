@@ -4,9 +4,7 @@
 
 use std::cmp::Ordering;
 
-use bitcode::{Decode, Encode};
 use rustc_hash::FxHashMap;
-use serde::{Deserialize, Serialize};
 
 use crate::MemoryUsage;
 
@@ -14,7 +12,9 @@ pub mod hybrid;
 
 pub use self::hybrid::HybridPalette;
 
-#[derive(Debug, Clone, PartialEq, Eq, Encode, Decode, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct PaletteEntry<T: Eq + Clone> {
     pub value: T,
     pub count: u32,

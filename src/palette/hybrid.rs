@@ -7,10 +7,7 @@
 
 use std::hash::Hash;
 
-use bitcode::{Decode, Encode};
 use rustc_hash::FxHashMap;
-use serde::{Deserialize, Serialize};
-use serde_big_array::BigArray;
 
 use crate::{
     palette::{calculate_smallest_index_size, compare_palette_entries_max_first},
@@ -25,17 +22,21 @@ use super::{compare_palette_entries_option_max_first, Palette, PaletteEntry};
 /// (up to `INLINE_PALETTE_THRESHOLD`) and switches to heap-allocated `FxHashMap`s
 /// if this threshold is exceeded. This provides a balance between performance
 /// for small palettes and scalability for larger ones.
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct HybridPalette<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> {
     index_size: usize,
     real_entries: usize,
     storage: HybridStorage<INLINE_PALETTE_THRESHOLD, T>,
 }
 
-#[derive(Clone, Encode, Decode, Serialize, Deserialize)]
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 enum HybridStorage<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> {
     Array {
-        #[serde(with = "BigArray")]
+        #[cfg_attr(feature = "serde", serde(with = "serde_big_array::BigArray"))]
         array: [Option<PaletteEntry<T>>; INLINE_PALETTE_THRESHOLD],
     },
     HashMap {

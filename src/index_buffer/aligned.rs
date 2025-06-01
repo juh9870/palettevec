@@ -4,9 +4,7 @@
 //! It does NOT store u64-boundary crossing indices. This means slightly more
 //! memory usage for slightly faster access times. This is a good default.
 
-use bitcode::{Decode, Encode};
 use rustc_hash::FxHashMap;
-use serde::{Deserialize, Serialize};
 
 use crate::MemoryUsage;
 
@@ -17,7 +15,9 @@ use super::IndexBuffer;
 ///
 /// It does NOT store u64-boundary crossing indices. This means slightly more
 /// memory usage for slightly faster access times. This is a good default.
-#[derive(Clone, Encode, Decode, Serialize, Deserialize)]
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct AlignedIndexBuffer {
     index_size: usize,
     indices_per_u64: u8,
@@ -37,11 +37,11 @@ impl AlignedIndexBuffer {
         debug_assert!(index_size > 0);
         debug_assert_eq!(64 / index_size, indices_per_u64);
         let target_u64 = {
-            #[cfg(feature = "unsafe_optimizations")]
+            #[cfg(feature = "unsafe-optimizations")]
             {
                 unsafe { self.storage.get_unchecked_mut(offset / indices_per_u64) }
             }
-            #[cfg(not(feature = "unsafe_optimizations"))]
+            #[cfg(not(feature = "unsafe-optimizations"))]
             {
                 &mut self.storage[offset / indices_per_u64]
             }
@@ -57,11 +57,11 @@ impl AlignedIndexBuffer {
     fn _set_index(&mut self, offset: usize, index: usize) -> usize {
         let indices_per_u64 = self.indices_per_u64 as usize;
         let target_u64 = {
-            #[cfg(feature = "unsafe_optimizations")]
+            #[cfg(feature = "unsafe-optimizations")]
             {
                 unsafe { self.storage.get_unchecked_mut(offset / indices_per_u64) }
             }
-            #[cfg(not(feature = "unsafe_optimizations"))]
+            #[cfg(not(feature = "unsafe-optimizations"))]
             {
                 &mut self.storage[offset / indices_per_u64]
             }
@@ -79,11 +79,11 @@ impl AlignedIndexBuffer {
         }
         let indices_per_u64 = self.indices_per_u64 as usize;
         let target_u64 = {
-            #[cfg(feature = "unsafe_optimizations")]
+            #[cfg(feature = "unsafe-optimizations")]
             {
                 unsafe { self.storage.get_unchecked(offset / indices_per_u64) }
             }
-            #[cfg(not(feature = "unsafe_optimizations"))]
+            #[cfg(not(feature = "unsafe-optimizations"))]
             {
                 &self.storage[offset / indices_per_u64]
             }

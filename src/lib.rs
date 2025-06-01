@@ -17,10 +17,8 @@
 //! - **`IndexBuffer` trait:** Defines the interface for how indices are stored.
 use std::{hash::Hash, marker::PhantomData, ops::Add};
 
-use bitcode::{Decode, Encode};
 use index_buffer::IndexBuffer;
 use palette::{Palette, PaletteEntry};
-use serde::{Deserialize, Serialize};
 
 pub mod index_buffer;
 pub mod palette;
@@ -29,6 +27,8 @@ pub mod palette;
 pub(crate) mod tests;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct MemoryUsage {
     pub stack: usize,
     pub heap_actually_needed: usize,
@@ -53,7 +53,9 @@ impl Add for MemoryUsage {
 /// `T`: The type of elements stored. Must implement `Eq`, `Hash`, and `Clone`. \
 /// `P`: The `Palette` implementation used to manage unique elements. \
 /// `B`: The `IndexBuffer` implementation used to store indices into the palette.
-#[derive(Clone, Encode, Decode, Serialize, Deserialize)]
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct PaletteVec<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> {
     palette: P,
     buffer: B,
