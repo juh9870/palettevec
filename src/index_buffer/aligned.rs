@@ -46,7 +46,7 @@ impl AlignedIndexBuffer {
                 &mut self.storage[offset / indices_per_u64]
             }
         };
-        let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
+        let target_offset = (offset % indices_per_u64) * index_size;
         let mask = u64::MAX >> (64 - index_size);
         let old_index = (*target_u64 >> target_offset) & mask;
         *target_u64 &= !(mask << target_offset);
@@ -66,23 +66,12 @@ impl AlignedIndexBuffer {
                 &mut self.storage[offset / indices_per_u64]
             }
         };
-        let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
+        let target_offset = (offset % indices_per_u64) * self.index_size;
         let old_index = (*target_u64 >> target_offset) & self.mask;
         *target_u64 &= !(self.mask << target_offset);
         *target_u64 |= (index as u64) << target_offset;
         old_index as usize
     }
-
-    /*fn get_index_with_index_size(&self, offset: usize, index_size: usize) -> usize {
-        if index_size == 0 {
-            return 0;
-        }
-        let indices_per_u64 = 64 / index_size;
-        let target_u64 = &self.storage[offset / indices_per_u64];
-        let target_offset = 64 - (offset % indices_per_u64 + 1) * index_size;
-        let mask = u64::MAX >> (64 - index_size);
-        ((*target_u64 >> target_offset) & mask) as usize
-    }*/
 
     fn _get_index(&self, offset: usize) -> usize {
         if self.index_size == 0 {
@@ -99,7 +88,7 @@ impl AlignedIndexBuffer {
                 &self.storage[offset / indices_per_u64]
             }
         };
-        let target_offset = 64 - (offset % indices_per_u64 + 1) * self.index_size;
+        let target_offset = (offset % indices_per_u64) * self.index_size;
         ((*target_u64 >> target_offset) & self.mask) as usize
     }
 }
@@ -224,7 +213,7 @@ impl IndexBuffer for AlignedIndexBuffer {
 
         // Check if we need a new storage u64
         if self.len % indices_per_u64 == 0 {
-            self.storage.push((index as u64) << (64 - self.index_size));
+            self.storage.push(index as u64);
             self.len += 1;
             return;
         }
