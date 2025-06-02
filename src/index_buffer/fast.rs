@@ -132,6 +132,40 @@ impl FastIndexBuffer {
         };
         ((*target_u64 & mask) >> bit_offset) as usize
     }
+
+    /// Writes the indices into the buf, returns amount of indices actually written
+    fn get_index_bulk(&self, storage_index: usize, buf: &mut [usize; 8]) -> usize {
+        let count = self.indices_per_u64 as usize;
+
+        #[cfg(all(feature = "unsafe-optimizations", target_endian = "little"))]
+        if self.index_size == 8 {
+            let byte_ptr = self.storage.as_ptr() as *const u8;
+            let base_offset = storage_index << self.index_size_log_2;
+            unsafe {
+                for i in 0..count {
+                    buf[i] = *byte_ptr.add(base_offset + i) as usize;
+                }
+            }
+            return self.indices_per_u64 as usize;
+        }
+
+        let target_u64 = {
+            #[cfg(feature = "unsafe-optimizations")]
+            {
+                unsafe { self.storage.get_unchecked(storage_index) }
+            }
+            #[cfg(not(feature = "unsafe-optimizations"))]
+            {
+                &self.storage[storage_index]
+            }
+        };
+
+        for i in 0..count {
+            let bit_offset = i << self.index_size_log_2;
+            buf[i] = ((target_u64 >> bit_offset) & self.mask) as usize;
+        }
+        count
+    }
 }
 
 impl IndexBuffer for FastIndexBuffer {
@@ -330,6 +364,10 @@ impl IndexBuffer for FastIndexBuffer {
         FastIndexIterator {
             buffer: self,
             offset: 0,
+            bulk_buf: [0; 8],
+            bulk_pos: 0,
+            bulk_count: 0,
+            storage_index: 0,
         }
     }
 }
@@ -338,6 +376,10 @@ impl IndexBuffer for FastIndexBuffer {
 pub struct FastIndexIterator<'a> {
     buffer: &'a FastIndexBuffer,
     offset: usize,
+    bulk_buf: [usize; 8],
+    bulk_pos: usize,
+    bulk_count: usize,
+    storage_index: usize,
 }
 
 impl<'a> Iterator for FastIndexIterator<'a> {
@@ -345,11 +387,33 @@ impl<'a> Iterator for FastIndexIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.offset >= self.buffer.len {
-            None
-        } else {
-            let index = self.buffer.get_index(self.offset);
-            self.offset += 1;
-            Some(index)
+            return None;
         }
+
+        if self.buffer.index_size == 0 {
+            self.offset += 1;
+            return Some(0);
+        }
+
+        if self.bulk_pos == self.bulk_count {
+            let per_u64 = self.buffer.indices_per_u64 as usize;
+            let remaining = self.buffer.len - self.offset;
+
+            self.bulk_count = self
+                .buffer
+                .get_index_bulk(self.storage_index, &mut self.bulk_buf);
+
+            if remaining < per_u64 {
+                self.bulk_count = remaining;
+            }
+
+            self.storage_index += 1;
+            self.bulk_pos = 0;
+        }
+
+        let value = self.bulk_buf[self.bulk_pos];
+        self.bulk_pos += 1;
+        self.offset += 1;
+        Some(value)
     }
 }
