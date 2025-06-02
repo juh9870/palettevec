@@ -110,7 +110,7 @@ impl FastIndexBuffer {
         }
         #[cfg(all(feature = "unsafe-optimizations", target_endian = "little"))]
         if self.index_size == 8 {
-            let byte_ptr = self.storage.as_ptr() as *mut u8;
+            let byte_ptr = self.storage.as_ptr() as *const u8;
             unsafe {
                 let slot = byte_ptr.add(offset);
                 return *slot as usize;
