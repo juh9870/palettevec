@@ -35,14 +35,14 @@ pub type CountType = u32;
 ))]
 pub type CountType = u16;
 
-// Fallback
+// Demand usage of a feature
 #[cfg(all(
     not(feature = "count-usize"),
     not(feature = "count-u64"),
     not(feature = "count-u32"),
     not(feature = "count-u16"),
 ))]
-pub type CountType = usize;
+pub type CountType = u32;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

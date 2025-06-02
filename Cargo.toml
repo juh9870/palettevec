@@ -11,7 +11,6 @@ readme = "README.md"
 repository = "https://github.com/alexdesander/palettevec"
 include = ["src/**/*", "LICENSE-*", "README.md", "!**/tests/**/*"]
 
-
 [dependencies]
 rustc-hash = "2.1"
 bitcode = { version = "0.6", optional = true }
@@ -25,14 +24,14 @@ criterion = { version = "0.5", features = ["html_reports"] }
 rand_xoshiro = "0.7"
 
 [features]
-default = ["count-u32"]
+default = []
 unsafe-optimizations = []
-serde = ["dep:serde", "dep:serde-big-array"]
-bitcode = ["dep:bitcode"]
 count-u16 = []
 count-u32 = []
 count-u64 = []
 count-usize = []
+serde = ["dep:serde", "dep:serde-big-array"]
+bitcode = ["dep:bitcode"]
 
 [lib]
 bench = false
