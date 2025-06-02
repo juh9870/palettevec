@@ -17,7 +17,7 @@ fn map_index_size(from_palette: usize) -> usize {
 
 /// The FastIndexBuffer is aiming to optimize for access operations.
 /// It accomplishes this by rounding up the index_size to the nearest value that
-/// divides 64 and by skipping 2 and 4.
+/// is a power of 2 and by skipping 2 and 4.
 #[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
