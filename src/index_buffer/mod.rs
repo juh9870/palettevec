@@ -10,6 +10,7 @@ pub mod aligned;
 pub mod fast;
 
 pub use self::aligned::AlignedIndexBuffer;
+pub use self::fast::FastIndexBuffer;
 
 pub trait IndexBuffer {
     fn new() -> Self;
