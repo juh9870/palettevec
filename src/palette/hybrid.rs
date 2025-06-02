@@ -5,7 +5,7 @@
 //! if this threshold is exceeded. This provides a balance between performance
 //! for small palettes and scalability for larger ones.
 
-use std::hash::Hash;
+use std::{collections::hash_map, hash::Hash, iter::FilterMap};
 
 use rustc_hash::FxHashMap;
 
@@ -387,6 +387,98 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                 };
                 Some(new_mapping)
             }
+        }
+    }
+
+    type EntriesIter<'a>
+        = HybridPaletteEntriesIter<'a, T>
+    where
+        Self: 'a,
+        T: 'a;
+
+    fn iter(&self) -> Self::EntriesIter<'_> {
+        match &self.storage {
+            HybridStorage::Array { array } => {
+                HybridPaletteEntriesIter::Array(array.iter().filter_map(Option::as_ref))
+            }
+            HybridStorage::HashMap { index_map, .. } => {
+                HybridPaletteEntriesIter::HashMap(index_map.values())
+            }
+        }
+    }
+
+    type EntriesIterMut<'a>
+        = HybridPaletteEntriesIterMut<'a, T>
+    where
+        Self: 'a,
+        T: 'a;
+
+    fn iter_mut(&mut self) -> Self::EntriesIterMut<'_> {
+        match &mut self.storage {
+            HybridStorage::Array { array } => {
+                HybridPaletteEntriesIterMut::Array(array.iter_mut().filter_map(Option::as_mut))
+            }
+            HybridStorage::HashMap { index_map, .. } => {
+                HybridPaletteEntriesIterMut::HashMap(index_map.values_mut())
+            }
+        }
+    }
+}
+
+// REF ITERATOR
+pub enum HybridPaletteEntriesIter<'a, T: Eq + Clone + 'a> {
+    Array(
+        FilterMap<
+            std::slice::Iter<'a, Option<PaletteEntry<T>>>,
+            fn(&'a Option<PaletteEntry<T>>) -> Option<&'a PaletteEntry<T>>,
+        >,
+    ),
+    HashMap(hash_map::Values<'a, usize, PaletteEntry<T>>),
+}
+
+impl<'a, T: Eq + Clone> Iterator for HybridPaletteEntriesIter<'a, T> {
+    type Item = &'a PaletteEntry<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            HybridPaletteEntriesIter::Array(iter) => iter.next(),
+            HybridPaletteEntriesIter::HashMap(iter) => iter.next(),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            HybridPaletteEntriesIter::Array(iter) => iter.size_hint(),
+            HybridPaletteEntriesIter::HashMap(iter) => iter.size_hint(),
+        }
+    }
+}
+
+// ITERATOR
+pub enum HybridPaletteEntriesIterMut<'a, T: Eq + Clone + 'a> {
+    Array(
+        FilterMap<
+            std::slice::IterMut<'a, Option<PaletteEntry<T>>>,
+            fn(&'a mut Option<PaletteEntry<T>>) -> Option<&'a mut PaletteEntry<T>>,
+        >,
+    ),
+    HashMap(hash_map::ValuesMut<'a, usize, PaletteEntry<T>>),
+}
+
+impl<'a, T: Eq + Clone> Iterator for HybridPaletteEntriesIterMut<'a, T> {
+    type Item = &'a mut PaletteEntry<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            HybridPaletteEntriesIterMut::Array(iter) => iter.next(),
+            HybridPaletteEntriesIterMut::HashMap(iter) => iter.next(),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            HybridPaletteEntriesIterMut::Array(iter) => iter.size_hint(),
+            HybridPaletteEntriesIterMut::HashMap(iter) => iter.size_hint(),
         }
     }
 }

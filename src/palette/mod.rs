@@ -73,4 +73,25 @@ pub trait Palette<T: Eq + Clone>: Clone {
     /// Optimizes the palette and returns the mapping of old_index -> new_index
     /// if necessary.
     fn optimize(&mut self) -> Option<FxHashMap<usize, usize>>;
+
+    // REF ITERATOR
+    type EntriesIter<'a>: Iterator<Item = &'a PaletteEntry<T>>
+    where
+        Self: 'a,
+        T: 'a;
+
+    /// Returns an iterator over the palette entries.
+    fn iter(&self) -> Self::EntriesIter<'_>;
+
+    // MUT ITERATOR
+    type EntriesIterMut<'a>: Iterator<Item = &'a mut PaletteEntry<T>>
+    where
+        Self: 'a,
+        T: 'a;
+
+    /// Returns a mutable iterator over the palette entries.
+    /// Allows modifying entries in place. If an entry's count is set to 0,
+    /// `mark_as_unused` is NOT automatically called for that entry by this iterator.
+    /// The caller should ensure palette invariants are maintained, possibly by calling `optimize()` later.
+    fn iter_mut(&mut self) -> Self::EntriesIterMut<'_>;
 }

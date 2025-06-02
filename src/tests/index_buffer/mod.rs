@@ -1,6 +1,7 @@
 use crate::index_buffer::IndexBuffer;
 
 mod aligned;
+mod fast;
 
 fn test_index_buffer_set_index_size_no_mapping<B: IndexBuffer>(buffer: &mut B, index_size: usize) {
     buffer.set_index_size(index_size, None);

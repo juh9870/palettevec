@@ -1,3 +1,5 @@
+use rustc_hash::FxHashMap;
+
 use crate::palette::{calculate_smallest_index_size, Palette, PaletteEntry};
 
 mod hybrid;
@@ -172,4 +174,37 @@ fn test_palette_index_size_after_optimizing<P: Palette<u32>>(
             calculate_smallest_index_size(amount_unique_inserts - i - 1)
         )
     }
+}
+
+fn test_palette_iter<P: Palette<u32>>(mut palette: P, amount_unique_inserts: usize) {
+    assert!(palette.is_empty());
+    let mut control = FxHashMap::default();
+    for value in 0..amount_unique_inserts {
+        palette.insert_new(PaletteEntry {
+            value: value as u32,
+            count: value as u32 + 1,
+        });
+        control.insert(value as u32, value as u32 + 1);
+    }
+    for entry in palette.iter() {
+        assert_eq!(control.remove(&entry.value).unwrap(), entry.count);
+    }
+    assert!(control.is_empty());
+}
+
+fn test_palette_iter_mut<P: Palette<u32>>(mut palette: P, amount_unique_inserts: usize) {
+    assert!(palette.is_empty());
+    let mut control = FxHashMap::default();
+    for value in 0..amount_unique_inserts {
+        palette.insert_new(PaletteEntry {
+            value: value as u32,
+            count: value as u32 + 1,
+        });
+        control.insert(value as u32, value as u32 + 1);
+    }
+    for entry in palette.iter_mut() {
+        assert_eq!(control.remove(&entry.value).unwrap(), entry.count);
+        entry.count = 0;
+    }
+    assert!(control.is_empty());
 }

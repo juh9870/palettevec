@@ -7,6 +7,7 @@ use rustc_hash::FxHashMap;
 use crate::MemoryUsage;
 
 pub mod aligned;
+pub mod fast;
 
 pub use self::aligned::AlignedIndexBuffer;
 

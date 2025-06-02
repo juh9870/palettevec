@@ -127,3 +127,33 @@ fn palette_index_size_after_optimizing() {
     test_palette_index_size_after_optimizing(HybridPalette::<127, u32>::new(), 1);
     test_palette_index_size_after_optimizing(HybridPalette::<333, u32>::new(), 249);
 }
+
+#[test]
+fn palette_iter() {
+    test_palette_iter(HybridPalette::<0, u32>::new(), 16);
+    test_palette_iter(HybridPalette::<1, u32>::new(), 20);
+    test_palette_iter(HybridPalette::<2, u32>::new(), 9);
+    test_palette_iter(HybridPalette::<3, u32>::new(), 7);
+    test_palette_iter(HybridPalette::<4, u32>::new(), 27);
+    test_palette_iter(HybridPalette::<5, u32>::new(), 29);
+    test_palette_iter(HybridPalette::<17, u32>::new(), 43);
+    test_palette_iter(HybridPalette::<32, u32>::new(), 498);
+    test_palette_iter(HybridPalette::<127, u32>::new(), 10);
+    test_palette_iter(HybridPalette::<333, u32>::new(), 20);
+    test_palette_iter(HybridPalette::<200, u32>::new(), 43);
+}
+
+#[test]
+fn palette_iter_mut() {
+    test_palette_iter_mut(HybridPalette::<0, u32>::new(), 16);
+    test_palette_iter_mut(HybridPalette::<1, u32>::new(), 20);
+    test_palette_iter_mut(HybridPalette::<2, u32>::new(), 9);
+    test_palette_iter_mut(HybridPalette::<3, u32>::new(), 7);
+    test_palette_iter_mut(HybridPalette::<4, u32>::new(), 27);
+    test_palette_iter_mut(HybridPalette::<5, u32>::new(), 29);
+    test_palette_iter_mut(HybridPalette::<17, u32>::new(), 43);
+    test_palette_iter_mut(HybridPalette::<32, u32>::new(), 498);
+    test_palette_iter_mut(HybridPalette::<127, u32>::new(), 10);
+    test_palette_iter_mut(HybridPalette::<333, u32>::new(), 20);
+    test_palette_iter_mut(HybridPalette::<200, u32>::new(), 43);
+}

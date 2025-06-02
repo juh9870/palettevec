@@ -218,6 +218,19 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
     pub fn iter(&self) -> PaletteVecIter<T, P, B> {
         self.into_iter()
     }
+
+    pub fn iter_palette_entries(&self) -> P::EntriesIter<'_> {
+        self.palette.iter()
+    }
+
+    /// Returns a mutable iterator over the palette entries.
+    /// Each item is a `&mut PaletteEntry<T>`, allowing modification of the value and its count.
+    ///
+    /// IMPORTANT: Do NOT change the count and make sure you do not introduce duplicate
+    /// palette entries (duplicate values).
+    pub fn iter_palette_entries_mut(&mut self) -> P::EntriesIterMut<'_> {
+        self.palette.iter_mut()
+    }
 }
 
 impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> Default for PaletteVec<T, P, B> {

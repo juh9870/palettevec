@@ -1,11 +1,13 @@
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use rustc_hash::FxHashMap;
 
 use crate::{index_buffer::IndexBuffer, palette::Palette, PaletteVec};
 
 use super::calc_rng_iterations;
 
 mod base;
+mod fast;
 
 fn test_palette_vec_new<P, B>()
 where
@@ -359,5 +361,53 @@ where
     for value in &pv {
         assert_eq!(*value as usize, i % amount_unique_values);
         i += 1;
+    }
+}
+
+fn test_palette_vec_palette_iter<P, B>(amount_unique_values: usize, iteration_count: usize)
+where
+    P: Palette<u32>,
+    B: IndexBuffer,
+{
+    let mut pv: PaletteVec<u32, P, B> = PaletteVec::new();
+    assert!(pv.is_empty());
+    let mut control = FxHashMap::default();
+    for i in 0..iteration_count {
+        let value = i % amount_unique_values;
+        pv.push(value as u32);
+        if let Some(entry) = control.get_mut(&(value as u32)) {
+            *entry += 1;
+        } else {
+            control.insert(value as u32, 1);
+        }
+    }
+
+    for entry in pv.iter_palette_entries() {
+        let control_count = control.get(&entry.value).unwrap();
+        assert_eq!(entry.count, *control_count);
+    }
+}
+
+fn test_palette_vec_palette_iter_mut<P, B>(amount_unique_values: usize, iteration_count: usize)
+where
+    P: Palette<u32>,
+    B: IndexBuffer,
+{
+    let mut pv: PaletteVec<u32, P, B> = PaletteVec::new();
+    assert!(pv.is_empty());
+    let mut control = FxHashMap::default();
+    for i in 0..iteration_count {
+        let value = i % amount_unique_values;
+        pv.push(value as u32);
+        if let Some(entry) = control.get_mut(&(value as u32)) {
+            *entry += 1;
+        } else {
+            control.insert(value as u32, 1);
+        }
+    }
+
+    for entry in pv.iter_palette_entries_mut() {
+        let control_count = control.get(&entry.value).unwrap();
+        assert_eq!(entry.count, *control_count);
     }
 }
