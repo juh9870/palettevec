@@ -20,6 +20,8 @@ use std::{hash::Hash, marker::PhantomData, ops::Add};
 use index_buffer::IndexBuffer;
 use palette::{Palette, PaletteEntry};
 
+use crate::palette::CountType;
+
 pub mod index_buffer;
 pub mod palette;
 
@@ -75,7 +77,7 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         let mut palette = P::new();
         let (index, index_size) = palette.insert_new(PaletteEntry {
             value,
-            count: len as u32,
+            count: len as CountType,
         });
         debug_assert_eq!(index, 0);
         let mut buffer = B::new();

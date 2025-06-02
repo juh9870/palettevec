@@ -9,15 +9,47 @@ use rustc_hash::FxHashMap;
 use crate::MemoryUsage;
 
 pub mod hybrid;
+pub mod vec;
 
 pub use self::hybrid::HybridPalette;
+
+// Highest priority: usize
+#[cfg(feature = "count-usize")]
+pub type CountType = usize;
+
+#[cfg(all(not(feature = "count-usize"), feature = "count-u64"))]
+pub type CountType = u64;
+
+#[cfg(all(
+    not(feature = "count-usize"),
+    not(feature = "count-u64"),
+    feature = "count-u32"
+))]
+pub type CountType = u32;
+
+#[cfg(all(
+    not(feature = "count-usize"),
+    not(feature = "count-u64"),
+    not(feature = "count-u32"),
+    feature = "count-u16"
+))]
+pub type CountType = u16;
+
+// Fallback
+#[cfg(all(
+    not(feature = "count-usize"),
+    not(feature = "count-u64"),
+    not(feature = "count-u32"),
+    not(feature = "count-u16"),
+))]
+pub type CountType = usize;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct PaletteEntry<T: Eq + Clone> {
     pub value: T,
-    pub count: u32,
+    pub count: CountType,
 }
 
 /// Some with max count will be first, None will be last
@@ -91,7 +123,7 @@ pub trait Palette<T: Eq + Clone>: Clone {
 
     /// Returns a mutable iterator over the palette entries.
     /// Allows modifying entries in place. If an entry's count is set to 0,
-    /// `mark_as_unused` is NOT automatically called for that entry by this iterator.
-    /// The caller should ensure palette invariants are maintained, possibly by calling `optimize()` later.
+    /// 'mark_as_unused' is NOT automatically called for that entry by this iterator.
+    /// The caller should ensure palette invariants are maintained, possibly by calling 'optimize()' later.
     fn iter_mut(&mut self) -> Self::EntriesIterMut<'_>;
 }

@@ -23,10 +23,14 @@ criterion = { version = "0.5", features = ["html_reports"] }
 rand_xoshiro = "0.7"
 
 [features]
-default = []
+default = ["count-u32"]
 unsafe-optimizations = []
 serde = ["dep:serde", "dep:serde-big-array"]
 bitcode = ["dep:bitcode"]
+count-u16 = []
+count-u32 = []
+count-u64 = []
+count-usize = []
 
 [lib]
 bench = false

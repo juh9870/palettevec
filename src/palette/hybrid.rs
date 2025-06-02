@@ -426,13 +426,13 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
 }
 
 // REF ITERATOR
+type HybridPaletteEntriesFilter<'a, T> = FilterMap<
+    std::slice::Iter<'a, Option<PaletteEntry<T>>>,
+    fn(&'a Option<PaletteEntry<T>>) -> Option<&'a PaletteEntry<T>>,
+>;
+
 pub enum HybridPaletteEntriesIter<'a, T: Eq + Clone + 'a> {
-    Array(
-        FilterMap<
-            std::slice::Iter<'a, Option<PaletteEntry<T>>>,
-            fn(&'a Option<PaletteEntry<T>>) -> Option<&'a PaletteEntry<T>>,
-        >,
-    ),
+    Array(HybridPaletteEntriesFilter<'a, T>),
     HashMap(hash_map::Values<'a, usize, PaletteEntry<T>>),
 }
 
@@ -455,13 +455,13 @@ impl<'a, T: Eq + Clone> Iterator for HybridPaletteEntriesIter<'a, T> {
 }
 
 // ITERATOR
+type HybridPaletteEntriesFilterMut<'a, T> = FilterMap<
+    std::slice::IterMut<'a, Option<PaletteEntry<T>>>,
+    fn(&'a mut Option<PaletteEntry<T>>) -> Option<&'a mut PaletteEntry<T>>,
+>;
+
 pub enum HybridPaletteEntriesIterMut<'a, T: Eq + Clone + 'a> {
-    Array(
-        FilterMap<
-            std::slice::IterMut<'a, Option<PaletteEntry<T>>>,
-            fn(&'a mut Option<PaletteEntry<T>>) -> Option<&'a mut PaletteEntry<T>>,
-        >,
-    ),
+    Array(HybridPaletteEntriesFilterMut<'a, T>),
     HashMap(hash_map::ValuesMut<'a, usize, PaletteEntry<T>>),
 }
 

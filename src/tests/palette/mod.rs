@@ -1,8 +1,9 @@
 use rustc_hash::FxHashMap;
 
-use crate::palette::{calculate_smallest_index_size, Palette, PaletteEntry};
+use crate::palette::{calculate_smallest_index_size, CountType, Palette, PaletteEntry};
 
 mod hybrid;
+mod vec;
 
 fn test_palette_insert_new<P: Palette<u32>>(mut palette: P, amount_unique_inserts: usize) {
     for value in 0..amount_unique_inserts {
@@ -116,11 +117,11 @@ fn test_palette_optimize<P: Palette<u32>>(mut palette: P, amount_unique_inserts:
     for value in 0..amount_unique_inserts {
         palette.insert_new(PaletteEntry {
             value: value as u32,
-            count: value as u32 + 1,
+            count: value as CountType + 1,
         });
         control.push(PaletteEntry {
             value: value as u32,
-            count: value as u32 + 1,
+            count: value as CountType + 1,
         });
     }
 
@@ -157,7 +158,7 @@ fn test_palette_index_size_after_optimizing<P: Palette<u32>>(
     for value in 0..amount_unique_inserts {
         palette.insert_new(PaletteEntry {
             value: value as u32,
-            count: value as u32 + 1,
+            count: value as CountType + 1,
         });
     }
     assert_eq!(
@@ -182,12 +183,15 @@ fn test_palette_iter<P: Palette<u32>>(mut palette: P, amount_unique_inserts: usi
     for value in 0..amount_unique_inserts {
         palette.insert_new(PaletteEntry {
             value: value as u32,
-            count: value as u32 + 1,
+            count: value as CountType + 1,
         });
         control.insert(value as u32, value as u32 + 1);
     }
     for entry in palette.iter() {
-        assert_eq!(control.remove(&entry.value).unwrap(), entry.count);
+        assert_eq!(
+            control.remove(&entry.value).unwrap() as CountType,
+            entry.count
+        );
     }
     assert!(control.is_empty());
 }
@@ -198,12 +202,15 @@ fn test_palette_iter_mut<P: Palette<u32>>(mut palette: P, amount_unique_inserts:
     for value in 0..amount_unique_inserts {
         palette.insert_new(PaletteEntry {
             value: value as u32,
-            count: value as u32 + 1,
+            count: value as CountType + 1,
         });
         control.insert(value as u32, value as u32 + 1);
     }
     for entry in palette.iter_mut() {
-        assert_eq!(control.remove(&entry.value).unwrap(), entry.count);
+        assert_eq!(
+            control.remove(&entry.value).unwrap() as CountType,
+            entry.count
+        );
         entry.count = 0;
     }
     assert!(control.is_empty());
