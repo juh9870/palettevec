@@ -276,7 +276,7 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
                         return (i, actual_new_index_size);
                     }
                 }
-                // No free spot available, need to swich to hashmap
+                // No free spot available, need to switch to hashmap
                 self.switch_to_hashmap();
                 self.insert_new(entry)
             }
