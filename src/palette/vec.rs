@@ -15,7 +15,7 @@ use crate::{
 /// Not optimal for very large palette sizes, but very fast for small ones.
 ///
 /// Also very memory efficient and no danger of stack overflow.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct VecPalette<T: Eq + Hash + Clone> {

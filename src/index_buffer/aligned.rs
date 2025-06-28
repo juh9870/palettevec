@@ -15,7 +15,7 @@ use super::IndexBuffer;
 ///
 /// It does NOT store u64-boundary crossing indices. This means slightly more
 /// memory usage for slightly faster access times. This is a good default.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct AlignedIndexBuffer {

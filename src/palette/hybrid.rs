@@ -31,7 +31,7 @@ pub struct HybridPalette<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + C
     storage: HybridStorage<INLINE_PALETTE_THRESHOLD, T>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 enum HybridStorage<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> {

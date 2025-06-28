@@ -55,7 +55,7 @@ impl Add for MemoryUsage {
 /// `T`: The type of elements stored. Must implement `Eq`, `Hash`, and `Clone`. \
 /// `P`: The `Palette` implementation used to manage unique elements. \
 /// `B`: The `IndexBuffer` implementation used to store indices into the palette.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "bitcode", derive(bitcode::Encode, bitcode::Decode))]
 pub struct PaletteVec<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> {
