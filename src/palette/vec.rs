@@ -177,6 +177,7 @@ type VecPaletteEntriesFilter<'a, T> = FilterMap<
     fn(&'a Option<PaletteEntry<T>>) -> Option<&'a PaletteEntry<T>>,
 >;
 
+#[derive(Debug, Clone)]
 pub struct VecPaletteEntriesIter<'a, T: Eq + Clone + 'a> {
     data: VecPaletteEntriesFilter<'a, T>,
 }
@@ -199,6 +200,7 @@ type VecPaletteEntriesFilterMut<'a, T> = FilterMap<
     fn(&'a mut Option<PaletteEntry<T>>) -> Option<&'a mut PaletteEntry<T>>,
 >;
 
+#[derive(Debug)]
 pub struct VecPaletteEntriesIterMut<'a, T: Eq + Clone + 'a> {
     data: VecPaletteEntriesFilterMut<'a, T>,
 }

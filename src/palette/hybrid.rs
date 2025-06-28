@@ -431,6 +431,7 @@ type HybridPaletteEntriesFilter<'a, T> = FilterMap<
     fn(&'a Option<PaletteEntry<T>>) -> Option<&'a PaletteEntry<T>>,
 >;
 
+#[derive(Debug, Clone)]
 pub enum HybridPaletteEntriesIter<'a, T: Eq + Clone + 'a> {
     Array(HybridPaletteEntriesFilter<'a, T>),
     HashMap(hash_map::Values<'a, usize, PaletteEntry<T>>),
@@ -460,6 +461,7 @@ type HybridPaletteEntriesFilterMut<'a, T> = FilterMap<
     fn(&'a mut Option<PaletteEntry<T>>) -> Option<&'a mut PaletteEntry<T>>,
 >;
 
+#[derive(Debug)]
 pub enum HybridPaletteEntriesIterMut<'a, T: Eq + Clone + 'a> {
     Array(HybridPaletteEntriesFilterMut<'a, T>),
     HashMap(hash_map::ValuesMut<'a, usize, PaletteEntry<T>>),
