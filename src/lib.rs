@@ -242,6 +242,7 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> Default for PaletteVec
 }
 
 // ITERATOR
+#[derive(Debug, Clone)]
 pub struct PaletteVecIter<'a, T, P, B>
 where
     T: Eq + Hash + Clone,

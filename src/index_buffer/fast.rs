@@ -373,6 +373,7 @@ impl IndexBuffer for FastIndexBuffer {
 }
 
 // ITERATOR
+#[derive(Debug, Clone)]
 pub struct FastIndexIterator<'a> {
     buffer: &'a FastIndexBuffer,
     offset: usize,

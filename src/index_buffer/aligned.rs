@@ -272,6 +272,7 @@ impl IndexBuffer for AlignedIndexBuffer {
 }
 
 // ITERATOR
+#[derive(Debug, Clone)]
 pub struct AlignedIndexIterator<'a> {
     buffer: &'a AlignedIndexBuffer,
     offset: usize,
