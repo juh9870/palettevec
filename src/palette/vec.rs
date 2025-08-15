@@ -52,7 +52,13 @@ impl<T: Eq + Hash + Clone> Palette<T> for VecPalette<T> {
     fn index_size(&self) -> usize {
         self.index_size
     }
-
+    
+    fn clear(&mut self) { 
+        self.storage.clear();
+        self.index_size = 0;
+        self.real_entries = 0;
+    }
+    
     fn mark_as_unused(&mut self, index: usize) {
         debug_assert!(self.storage[index].is_some());
         self.real_entries -= 1;

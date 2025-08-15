@@ -204,6 +204,60 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
         Some(&self.palette.get_by_index(index).unwrap().value)
     }
 
+    /// Clears the palette and the indices vector. This will delete all data
+    /// in the `PaletteVec`, but potentially keep the allocated memory,
+    /// allowing for faster future insertions than creating a new `PaletteVec`.
+    pub fn clear(&mut self) {
+        self.palette.clear();
+        self.buffer.clear();
+    }
+
+    pub fn resize(&mut self, new_len: usize, value: &T) {
+        if new_len == self.len() {
+            return;
+        } else if new_len == 0 {
+            self.clear();
+            return;
+        } else if new_len < self.len() {
+            let (Some(removed), None) = self.buffer.resize(new_len, 0) else {
+                unreachable!()
+            };
+            for (id, amount) in removed {
+                let entry = self.palette.get_mut_by_index(id).unwrap();
+                entry.count -= amount;
+                if entry.count == 0 {
+                    self.palette.mark_as_unused(id);
+                }
+            }
+        } else if new_len > self.len() {
+            // Check if the value is already in the palette
+            let index = if let Some((_, index)) = self.palette.get_mut_by_value(value) {
+                index
+            } else {
+                // Value is new, insert into palette
+                let (new_index, new_index_size) = self.palette.insert_new(PaletteEntry {
+                    value: value.clone(),
+                    count: 1,
+                });
+                if let Some(new_index_size) = new_index_size {
+                    self.buffer.set_index_size(new_index_size, None);
+                }
+                new_index
+            };
+
+            let (None, Some(added)) = self.buffer.resize(new_len, index) else {
+                unreachable!()
+            };
+
+            assert_ne!(added, 0);
+
+            let entry = self.palette.get_mut_by_index(index).unwrap();
+            entry.count += added;
+        }
+        
+        assert_eq !(self.len(), new_len)
+    }
+
     /// Optimizes the palette and indices vector. This is potentially very expensive
     /// and should be done sparingly, but it should be done at some point.
     ///

@@ -5,6 +5,7 @@
 use rustc_hash::FxHashMap;
 
 use crate::MemoryUsage;
+use crate::palette::CountType;
 
 pub mod aligned;
 pub mod fast;
@@ -18,7 +19,13 @@ pub trait IndexBuffer {
     ///
     /// When index_size = 0 this should just set the len.
     fn zeroed(&mut self, len: usize);
-
+    /// Clears itself, resets the index size, and removes all indices
+    fn clear(&mut self);
+    /// Resizes the index buffer to the new length
+    /// Returns a mapping of removed indices to their count and the amount of
+    /// the new index added
+    fn resize(&mut self, new_len: usize, index: usize) -> (Option<FxHashMap<usize, CountType>>, Option<CountType>);
+    
     /// Returns the number of indices in the buffer.
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;

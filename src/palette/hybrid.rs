@@ -179,6 +179,22 @@ impl<const INLINE_PALETTE_THRESHOLD: usize, T: Eq + Hash + Clone> Palette<T>
         self.index_size
     }
 
+    fn clear(&mut self) {
+        self.real_entries = 0;
+        self.index_size = 0;
+        // do not switch to array here, because we want to keep memory allocated for hashmap
+        //
+        // If switch back to array is desirable, it can be done by optimizing after clearing
+        match &mut self.storage {
+            HybridStorage::Array { array } => { array.fill(None) }
+            HybridStorage::HashMap { value_map, index_map, free_indices } => {
+                value_map.clear();
+                index_map.clear();
+                free_indices.clear();
+            }
+        }
+    }
+
     fn mark_as_unused(&mut self, index: usize) {
         self.real_entries -= 1;
         match &mut self.storage {

@@ -1,7 +1,7 @@
 use rustc_hash::FxHashMap;
 
 use crate::MemoryUsage;
-
+use crate::palette::CountType;
 use super::IndexBuffer;
 
 fn map_index_size(from_palette: usize) -> usize {
@@ -193,6 +193,38 @@ impl IndexBuffer for FastIndexBuffer {
         self.storage.resize(needed_u64, 0);
         self.storage.fill(0);
         self.len = len;
+    }
+
+    fn clear(&mut self) {
+        self.index_size = 0;
+        self.index_size_log_2 = 0;
+        self.indices_per_u64 = 0;
+        self.mask = 0;
+        self.len = 0;
+        self.storage.clear();
+    }
+
+    fn resize(&mut self, new_len: usize, index: usize) -> (Option<FxHashMap<usize, CountType>>, Option<CountType>) {
+        if self.len == 0 && index == 0 {
+            self.zeroed(new_len);
+            return (None, Some(new_len as CountType))
+        }
+        if new_len < self.len {
+            let mut removed_indices = FxHashMap::default();
+            while new_len < self.len {
+                if let Some(idx) = self.pop_index() {
+                    removed_indices.entry(idx).and_modify(|e| *e += 1).or_insert(1);
+                }
+            }
+            return (Some(removed_indices), None);
+        } else if new_len > self.len {
+            let added = new_len - self.len;
+            while new_len > self.len {
+                self.push_index(index);
+            }
+            return (None, Some(added as CountType));
+        }
+        (None, None)
     }
 
     fn len(&self) -> usize {

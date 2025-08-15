@@ -89,6 +89,9 @@ pub trait Palette<T: Eq + Clone>: Clone {
     fn memory_usage(&self) -> MemoryUsage;
     /// Gets the current index size. This can change after insert_new() or optimize().
     fn index_size(&self) -> usize;
+    
+    /// Clears the palette, dropping all entries.
+    fn clear(&mut self);
 
     //fn get_by_value(&self, value: &T) -> Option<(&PaletteEntry<T>, usize)>;
     fn get_mut_by_value(&mut self, value: &T) -> Option<(&mut PaletteEntry<T>, usize)>;
