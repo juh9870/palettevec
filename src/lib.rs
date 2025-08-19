@@ -16,7 +16,7 @@
 //! - **`Palette<T>` trait:** Defines the interface for palette implementations.
 //! - **`IndexBuffer` trait:** Defines the interface for how indices are stored.
 use std::{hash::Hash, marker::PhantomData, ops::Add};
-
+use std::ops::{Index, IndexMut};
 use index_buffer::IndexBuffer;
 use palette::{Palette, PaletteEntry};
 
@@ -286,6 +286,14 @@ impl<T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> PaletteVec<T, P, B> {
     /// palette entries (duplicate values).
     pub fn iter_palette_entries_mut(&mut self) -> P::EntriesIterMut<'_> {
         self.palette.iter_mut()
+    }
+}
+
+impl <T: Eq + Hash + Clone, P: Palette<T>, B: IndexBuffer> Index<usize> for PaletteVec<T,P,B> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index).unwrap_or_else(|| panic!("Index {} out of bounds for PaletteVec with length {}", index, self.len()))
     }
 }
 
