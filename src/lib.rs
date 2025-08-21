@@ -16,7 +16,7 @@
 //! - **`Palette<T>` trait:** Defines the interface for palette implementations.
 //! - **`IndexBuffer` trait:** Defines the interface for how indices are stored.
 use std::{hash::Hash, marker::PhantomData, ops::Add};
-use std::ops::{Index, IndexMut};
+use std::ops::{Index};
 use index_buffer::IndexBuffer;
 use palette::{Palette, PaletteEntry};
 
